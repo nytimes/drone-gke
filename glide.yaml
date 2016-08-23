@@ -1,0 +1,5 @@
+package: github.com/adammck/drone-gke
+import:
+- package: github.com/drone/drone-plugin-go
+  subpackages:
+  - plugin
