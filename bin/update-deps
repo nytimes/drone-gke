@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+cd $(cd `dirname "$0"`; cd ..; pwd)
+
+# https://glide.sh
+# brew install glide
+glide up
+
+# https://github.com/sgotti/glide-vc
+# go get github.com/sgotti/glide-vc
+glide-vc --only-code --no-tests --no-legal-files
