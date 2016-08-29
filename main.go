@@ -1,7 +1,9 @@
 package main
 
 import (
+  "encoding/json"
   "fmt"
+  "io"
   "io/ioutil"
   "os"
   "os/exec"
@@ -14,6 +16,8 @@ import (
 )
 
 type GKE struct {
+  DryRun     bool                   `json:"dry_run"`
+  Verbose    bool                   `json:"verbose"`
   Token      string                 `json:"token"`
   GCloudCmd  string                 `json:"gcloud_cmd"`
   KubectlCmd string                 `json:"kubectl_cmd"`
@@ -21,7 +25,7 @@ type GKE struct {
   Zone       string                 `json:"zone"`
   Cluster    string                 `json:"cluster"`
   Template   string                 `json:"template"`
-  Extra      map[string]interface{} `json:"extra"`
+  Vars       map[string]interface{} `json:"vars"`
 }
 
 var (
@@ -156,15 +160,30 @@ func main() {
 
     // https://godoc.org/github.com/drone/drone-plugin-go/plugin#Workspace
     // Note that we don't include the vargs, since that includes the GCP token.
-    "Workspace": workspace,
-    "Repo":      repo,
-    "Build":     build,
-    "System":    system,
+    "workspace": workspace,
+    "repo":      repo,
+    "build":     build,
+    "system":    system,
 
     // Misc stuff
-    "Project": vargs.Project,
-    "Cluster": vargs.Cluster,
-    "Extra":   vargs.Extra,
+    "project": vargs.Project,
+    "cluster": vargs.Cluster,
+  }
+
+  for k, v := range vargs.Vars {
+
+    // Don't allow vars to be overriden.
+    _, ok := data[k]
+    if ok {
+      fmt.Printf("var %q shadows existing var\n", k)
+      os.Exit(1)
+    }
+
+    data[k] = v
+  }
+
+  if vargs.Verbose {
+    dumpTemplateData(os.Stdout, data)
   }
 
   err = tmpl.Execute(f, data)
@@ -179,22 +198,16 @@ func main() {
   kubeEnv := os.Environ()
   kubeEnv = append(kubeEnv, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
 
-  fmt.Println("---START DEPLOYMENT---")
-  b, _ := ioutil.ReadFile(outPath)
-  fmt.Println(string(b))
-  fmt.Println("---END DEPLOYMENT---")
+  if vargs.Verbose {
+    dumpDeploymentFile(os.Stdout, outPath)
+  }
 
-  //
+  if vargs.DryRun {
+    fmt.Printf("skipping kubectl apply, because dry_run=true\n")
+    os.Exit(0)
+  }
 
-  cmd = exec.Command(vargs.KubectlCmd, "get", "--filename", outPath)
-  cmd.Dir = workspace.Path
-  //cmd.Stdout = os.Stdout
-  //cmd.Stderr = os.Stderr
-  cmd.Env = kubeEnv
-  trace(cmd)
-  err = cmd.Run()
-
-  cmd = exec.Command(vargs.KubectlCmd, "apply", "--record", "--filename", outPath)
+  cmd = exec.Command(vargs.KubectlCmd, "apply", "--filename", outPath)
   cmd.Dir = workspace.Path
   cmd.Stdout = os.Stdout
   cmd.Stderr = os.Stderr
@@ -210,4 +223,31 @@ func main() {
 func trace(cmd *exec.Cmd) {
   fmt.Println()
   fmt.Println("$", strings.Join(cmd.Args, " "))
+}
+
+func dumpTemplateData(w io.Writer, data interface{}) {
+  fmt.Fprintln(w, "---START DATA---")
+  defer fmt.Fprintln(w, "---END DATA---")
+
+  b, err := json.MarshalIndent(data, "", "\t")
+  if err != nil {
+    fmt.Fprintf(w, "error marshalling: %s\n", err)
+    return
+  }
+
+  w.Write(b)
+  fmt.Fprintf(w, "\n")
+}
+
+func dumpDeploymentFile(w io.Writer, path string) {
+  fmt.Fprintln(w, "---START DEPLOYMENT---")
+  defer fmt.Fprintln(w, "---END DEPLOYMENT---")
+
+  data, err := ioutil.ReadFile(path)
+  if err != nil {
+    fmt.Fprintf(w, "error reading file: %s\n", err)
+    return
+  }
+
+  fmt.Fprintln(w, string(data))
 }
