@@ -194,21 +194,7 @@ func main() {
   trace(cmd)
   err = cmd.Run()
 
-  kubeAction := "replace"
-
-  if err != nil {
-    _, ok := err.(*exec.ExitError)
-
-    // Unexpected i/o problem
-    if !ok {
-      fmt.Printf("error: %s\n", err)
-      os.Exit(1)
-    }
-
-    kubeAction = "create"
-  }
-
-  cmd = exec.Command(vargs.KubectlCmd, kubeAction, "--record", "--filename", outPath)
+  cmd = exec.Command(vargs.KubectlCmd, "apply", "--record", "--filename", outPath)
   cmd.Dir = workspace.Path
   cmd.Stdout = os.Stdout
   cmd.Stderr = os.Stderr
