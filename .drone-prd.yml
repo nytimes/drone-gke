@@ -1,0 +1,33 @@
+build:
+  image: golang:1.7
+  environment:
+    - CGO_ENABLED=0
+    - GOPATH=/drone
+  commands:
+    - env
+    - go vet
+    - go test
+    - go build -ldflags "-s -w -X main.build=$DRONE_BUILD_NUMBER" -a -tags netgo
+
+publish:
+  docker:
+    repo: adammck/drone-gke
+    tag: latest
+    when:
+      branch: master
+
+    # Hack: Use the vfs driver to get Docker-in-Docker working on CentOS
+    # Todo: Migrate the Drone servers to an operating system which works
+    # See: https://github.com/drone/drone/issues/1296
+    storage_driver: vfs
+
+    # Todo: The docs indicate that these should be implicit. What's up?
+    username: $$DOCKER_USER
+    password: $$DOCKER_PASS
+    email: $$DOCKER_EMAIL
+
+plugin:
+  name: Google Container Engine
+  desc: Deploy images to Kubernetes on Google Container Engine
+  type: publish
+  image: adammck/drone-gke

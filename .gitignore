@@ -1,3 +1,2 @@
-/.drone.sec.yml
+/.drone-prd.sec.yml
 /drone-gke
-

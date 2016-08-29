@@ -1,0 +1,4 @@
+environment:
+  DOCKER_USER: x
+  DOCKER_EMAIL: x
+  DOCKER_PASS: x
