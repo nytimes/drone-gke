@@ -206,7 +206,7 @@ func wrapMain() error {
 }
 
 type token struct {
-	projectID string `json:"project_id"`
+	ProjectID string `json:"project_id"`
 }
 
 func getProjectFromToken(j string) string {
@@ -215,5 +215,5 @@ func getProjectFromToken(j string) string {
 	if err != nil {
 		return ""
 	}
-	return t.projectID
+	return t.ProjectID
 }

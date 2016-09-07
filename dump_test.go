@@ -1,11 +1,6 @@
 package main
 
-import (
-	"bytes"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
+import "testing"
 
 func TestDumpData(t *testing.T) {
 }
