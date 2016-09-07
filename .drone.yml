@@ -7,7 +7,7 @@ build:
     - env
     - go vet
     - go test
-    - go build -ldflags "-s -w -X main.build=$DRONE_BUILD_NUMBER" -a -tags netgo
+    - go build -ldflags "-s -w -X main.build=$DRONE_BUILD_NUMBER -X main.rev=$DRONE_COMMIT" -a -tags netgo
 
 publish:
   docker:

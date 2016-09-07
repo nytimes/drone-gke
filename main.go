@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -75,6 +73,7 @@ func wrapMain() error {
 	}
 
 	sdkPath := "/google-cloud-sdk"
+	keyPath := "/tmp/gcloud.json"
 
 	// Defaults
 
@@ -86,15 +85,16 @@ func wrapMain() error {
 		vargs.KubectlCmd = fmt.Sprintf("%s/bin/kubectl", sdkPath)
 	}
 
-	// Trim whitespace
+	// Trim whitespace, to forgive the vagaries of YAML parsing.
 	vargs.Token = strings.TrimSpace(vargs.Token)
 
-	// Write credentials to tmp file
-	keyPath := "/tmp/gcloud.json"
+	// Write credentials to tmp file to be picked up by the 'gcloud' command.
+	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(vargs.Token), 0600)
 	if err != nil {
 		return fmt.Errorf("error writing token file: %s\n", err)
 	}
+
 	// Warn if the keyfile can't be deleted, but don't abort. We're almost
 	// certainly running inside an ephemeral container, so the file will be
 	// discarded when we're finished anyway.
@@ -105,11 +105,9 @@ func wrapMain() error {
 		}
 	}()
 
-	runner := NewEnviron(workspace.Path, os.Environ(), os.Stdout, os.Stderr)
-
-	// fmt.Println("workspace=%v", workspace)
-	// fmt.Println("build=%v", build)
-	// fmt.Println("vargs=%v", vargs)
+	e := os.Environ()
+	e = append(e, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
+	runner := NewEnviron(workspace.Path, e, os.Stdout, os.Stderr)
 
 	err = runner.Run(vargs.GCloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
@@ -125,7 +123,6 @@ func wrapMain() error {
 	bn := filepath.Base(inPath)
 
 	// Generate the deployment file
-	//data := makeDeployment("whatever-deployment", )
 	blob, err := ioutil.ReadFile(inPath)
 	if err != nil {
 		return fmt.Errorf("error reading template: %s\n", err)
@@ -134,12 +131,6 @@ func wrapMain() error {
 	tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
 	if err != nil {
 		return fmt.Errorf("error parsing template: %s\n", err)
-	}
-
-	outPath := fmt.Sprintf("/tmp/%s", bn)
-	f, err := os.Create(outPath)
-	if err != nil {
-		return fmt.Errorf("error creating deployment file: %s\n", err)
 	}
 
 	data := map[string]interface{}{
@@ -151,20 +142,22 @@ func wrapMain() error {
 		"TAG":          "", // How?
 
 		// https://godoc.org/github.com/drone/drone-plugin-go/plugin#Workspace
-		// Note that we don't include the vargs, since that includes the GCP token.
+
 		"workspace": workspace,
 		"repo":      repo,
 		"build":     build,
 		"system":    system,
 
-		// Misc stuff
+		// Misc useful stuff. Note that we don't include all of the vargs, since
+		// that includes the GCP token.
 		"project": vargs.Project,
 		"cluster": vargs.Cluster,
 	}
 
 	for k, v := range vargs.Vars {
 
-		// Don't allow vars to be overriden.
+		// Don't allow vars to be overriden. We do this to ensure that the
+		// built-in template vars (above) can be relied upon.
 		_, ok := data[k]
 		if ok {
 			return fmt.Errorf("var %q shadows existing var\n", k)
@@ -173,8 +166,14 @@ func wrapMain() error {
 		data[k] = v
 	}
 
+	outPath := fmt.Sprintf("/tmp/%s", bn)
+	f, err := os.Create(outPath)
+	if err != nil {
+		return fmt.Errorf("error creating deployment file: %s\n", err)
+	}
+
 	if vargs.Verbose {
-		dumpTemplateData(os.Stdout, data)
+		dumpData(os.Stdout, "DATA", data)
 	}
 
 	err = tmpl.Execute(f, data)
@@ -186,7 +185,7 @@ func wrapMain() error {
 	f.Close()
 
 	if vargs.Verbose {
-		dumpDeploymentFile(os.Stdout, outPath)
+		dumpFile(os.Stdout, "DEPLOYMENT", outPath)
 	}
 
 	if vargs.DryRun {
@@ -194,38 +193,10 @@ func wrapMain() error {
 		return nil
 	}
 
-	runner.env = append(runner.env, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
 	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", outPath)
 	if err != nil {
 		return fmt.Errorf("error: %s\n", err)
 	}
 
 	return nil
-}
-
-func dumpTemplateData(w io.Writer, data interface{}) {
-	fmt.Fprintln(w, "---START DATA---")
-	defer fmt.Fprintln(w, "---END DATA---")
-
-	b, err := json.MarshalIndent(data, "", "\t")
-	if err != nil {
-		fmt.Fprintf(w, "error marshalling: %s\n", err)
-		return
-	}
-
-	w.Write(b)
-	fmt.Fprintf(w, "\n")
-}
-
-func dumpDeploymentFile(w io.Writer, path string) {
-	fmt.Fprintln(w, "---START DEPLOYMENT---")
-	defer fmt.Fprintln(w, "---END DEPLOYMENT---")
-
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		fmt.Fprintf(w, "error reading file: %s\n", err)
-		return
-	}
-
-	fmt.Fprintln(w, string(data))
 }
