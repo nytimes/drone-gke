@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-
 	"text/template"
 
 	"github.com/drone/drone-plugin-go/plugin"
@@ -62,6 +62,10 @@ func wrapMain() error {
 
 	if vargs.Token == "" {
 		return fmt.Errorf("missing required param: token")
+	}
+
+	if vargs.Project == "" {
+		vargs.Project = getProjectFromToken(vargs.Token)
 	}
 
 	if vargs.Project == "" {
@@ -199,4 +203,17 @@ func wrapMain() error {
 	}
 
 	return nil
+}
+
+type token struct {
+	projectID string `json:"project_id"`
+}
+
+func getProjectFromToken(j string) string {
+	t := token{}
+	err := json.Unmarshal([]byte(j), &t)
+	if err != nil {
+		return ""
+	}
+	return t.projectID
 }
