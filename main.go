@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,6 +24,7 @@ type GKE struct {
 	Cluster    string                 `json:"cluster"`
 	Template   string                 `json:"template"`
 	Vars       map[string]interface{} `json:"vars"`
+	Secrets    map[string]interface{} `json:"secrets"`
 }
 
 var (
@@ -170,14 +172,21 @@ func wrapMain() error {
 		data[k] = v
 	}
 
+	if vargs.Verbose {
+		dumpData(os.Stdout, "DATA", data)
+	}
+
+	secrets := map[string]interface{}{}
+	for k, v := range vargs.Secrets {
+		// Base64 encode secret strings.
+		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v.(string)))
+	}
+	data["secrets"] = secrets
+
 	outPath := fmt.Sprintf("/tmp/%s", bn)
 	f, err := os.Create(outPath)
 	if err != nil {
 		return fmt.Errorf("error creating deployment file: %s\n", err)
-	}
-
-	if vargs.Verbose {
-		dumpData(os.Stdout, "DATA", data)
 	}
 
 	err = tmpl.Execute(f, data)
