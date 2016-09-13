@@ -1,5 +1,0 @@
-#!/bin/bash
-set -euo pipefail
-cd $(cd `dirname "$0"`; cd ..; pwd)
-
-drone secure --in ".drone-prd.sec.yml" --out ".drone-prd.sec" --yaml ".drone-prd.yml" --repo adammck/drone-gke
