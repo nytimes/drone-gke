@@ -16,5 +16,7 @@ RUN ./google-cloud-sdk/bin/gcloud components install kubectl
 # Clean up
 RUN rm -rf ./google-cloud-sdk/.install
 
+# Add the Drone plugin
 ADD drone-gke /bin/
+
 ENTRYPOINT ["/bin/drone-gke"]
