@@ -160,7 +160,9 @@ func wrapMain() error {
 	}
 
 	if vargs.Verbose {
-		dumpData(os.Stdout, "DATA", data)
+		dump := data
+		delete(dump, "workspace")
+		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
 	}
 
 	secrets := map[string]interface{}{}
