@@ -13,4 +13,4 @@ if [ "$BRANCH" = "master" ]; then
 fi
 
 docker build -t "$OWNER/drone-gke:$BRANCH" .
-docker push "$OWNER/drone-gke"
+docker push "$OWNER/drone-gke:$BRANCH"
