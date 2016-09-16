@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,16 +14,18 @@ import (
 )
 
 type GKE struct {
-	DryRun     bool                   `json:"dry_run"`
-	Verbose    bool                   `json:"verbose"`
-	Token      string                 `json:"token"`
-	GCloudCmd  string                 `json:"gcloud_cmd"`
-	KubectlCmd string                 `json:"kubectl_cmd"`
-	Project    string                 `json:"project"`
-	Zone       string                 `json:"zone"`
-	Cluster    string                 `json:"cluster"`
-	Template   string                 `json:"template"`
-	Vars       map[string]interface{} `json:"vars"`
+	DryRun         bool                   `json:"dry_run"`
+	Verbose        bool                   `json:"verbose"`
+	Token          string                 `json:"token"`
+	GCloudCmd      string                 `json:"gcloud_cmd"`
+	KubectlCmd     string                 `json:"kubectl_cmd"`
+	Project        string                 `json:"project"`
+	Zone           string                 `json:"zone"`
+	Cluster        string                 `json:"cluster"`
+	Template       string                 `json:"template"`
+	SecretTemplate string                 `json:"secret_template"`
+	Vars           map[string]interface{} `json:"vars"`
+	Secrets        map[string]interface{} `json:"secrets"`
 }
 
 var (
@@ -123,20 +126,6 @@ func wrapMain() error {
 		return fmt.Errorf("error: %s\n", err)
 	}
 
-	inPath := filepath.Join(workspace.Path, vargs.Template)
-	bn := filepath.Base(inPath)
-
-	// Generate the deployment file
-	blob, err := ioutil.ReadFile(inPath)
-	if err != nil {
-		return fmt.Errorf("error reading template: %s\n", err)
-	}
-
-	tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
-	if err != nil {
-		return fmt.Errorf("error parsing template: %s\n", err)
-	}
-
 	data := map[string]interface{}{
 
 		// http://readme.drone.io/usage/variables/#string-interpolation:2b8b8ac4006be88c769f5e3fd99b009a
@@ -170,26 +159,61 @@ func wrapMain() error {
 		data[k] = v
 	}
 
-	outPath := fmt.Sprintf("/tmp/%s", bn)
-	f, err := os.Create(outPath)
-	if err != nil {
-		return fmt.Errorf("error creating deployment file: %s\n", err)
+	if vargs.Verbose {
+		dump := data
+		delete(dump, "workspace")
+		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
+	}
+
+	secrets := map[string]interface{}{}
+	for k, v := range vargs.Secrets {
+		// Base64 encode secret strings.
+		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v.(string)))
+	}
+	data["secrets"] = secrets
+
+	// TODO: infer these filenames & check for presence
+	templates := []string{vargs.Template, vargs.SecretTemplate}
+	outPaths := make(map[string]string)
+	pathArg := []string{}
+
+	for _, t := range templates {
+		if t == "" {
+			continue
+		}
+
+		inPath := filepath.Join(workspace.Path, t)
+		bn := filepath.Base(inPath)
+
+		// Generate the file
+		blob, err := ioutil.ReadFile(inPath)
+		if err != nil {
+			return fmt.Errorf("error reading template: %s\n", err)
+		}
+
+		tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
+		if err != nil {
+			return fmt.Errorf("error parsing template: %s\n", err)
+		}
+
+		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
+		f, err := os.Create(outPaths[t])
+		if err != nil {
+			return fmt.Errorf("error creating deployment file: %s\n", err)
+		}
+
+		err = tmpl.Execute(f, data)
+		if err != nil {
+			return fmt.Errorf("error executing deployment template: %s\n", err)
+		}
+
+		f.Close()
+
+		pathArg = append(pathArg, outPaths[t])
 	}
 
 	if vargs.Verbose {
-		dumpData(os.Stdout, "DATA", data)
-	}
-
-	err = tmpl.Execute(f, data)
-	if err != nil {
-		return fmt.Errorf("error executing deployment template: %s\n", err)
-	}
-
-	// TODO: Move this to defer
-	f.Close()
-
-	if vargs.Verbose {
-		dumpFile(os.Stdout, "DEPLOYMENT", outPath)
+		dumpFile(os.Stdout, "DEPLOYMENT (Secret Template Omitted)", outPaths[vargs.Template])
 	}
 
 	if vargs.DryRun {
@@ -197,7 +221,7 @@ func wrapMain() error {
 		return nil
 	}
 
-	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", outPath)
+	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
 	if err != nil {
 		return fmt.Errorf("error: %s\n", err)
 	}
