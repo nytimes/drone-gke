@@ -148,11 +148,9 @@ func wrapMain() error {
 	}
 
 	for k, v := range vargs.Vars {
-
 		// Don't allow vars to be overriden. We do this to ensure that the
 		// built-in template vars (above) can be relied upon.
-		_, ok := data[k]
-		if ok {
+		if _, ok := data[k]; ok {
 			return fmt.Errorf("var %q shadows existing var\n", k)
 		}
 
@@ -170,14 +168,17 @@ func wrapMain() error {
 		// Base64 encode secret strings.
 		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v.(string)))
 	}
-	data["secrets"] = secrets
 
 	// TODO: infer these filenames & check for presence
-	templates := []string{vargs.Template, vargs.SecretTemplate}
+	mapping := map[string]map[string]interface{}{
+		vargs.Template:       data,
+		vargs.SecretTemplate: secrets,
+	}
+
 	outPaths := make(map[string]string)
 	pathArg := []string{}
 
-	for _, t := range templates {
+	for t, content := range mapping {
 		if t == "" {
 			continue
 		}
@@ -202,7 +203,7 @@ func wrapMain() error {
 			return fmt.Errorf("error creating deployment file: %s\n", err)
 		}
 
-		err = tmpl.Execute(f, data)
+		err = tmpl.Execute(f, content)
 		if err != nil {
 			return fmt.Errorf("error executing deployment template: %s\n", err)
 		}
