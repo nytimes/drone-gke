@@ -64,7 +64,7 @@ func wrapMain() error {
 	// Check required params
 
 	if vargs.Token == "" {
-		return fmt.Errorf("missing required param: token")
+		return fmt.Errorf("Missing required param: token")
 	}
 
 	if vargs.Project == "" {
@@ -72,11 +72,11 @@ func wrapMain() error {
 	}
 
 	if vargs.Project == "" {
-		return fmt.Errorf("missing required param: project")
+		return fmt.Errorf("Missing required param: project")
 	}
 
 	if vargs.Zone == "" {
-		return fmt.Errorf("missing required param: zone")
+		return fmt.Errorf("Missing required param: zone")
 	}
 
 	if vargs.Template == "" {
@@ -107,7 +107,7 @@ func wrapMain() error {
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(vargs.Token), 0600)
 	if err != nil {
-		return fmt.Errorf("error writing token file: %s\n", err)
+		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
 
 	// Warn if the keyfile can't be deleted, but don't abort. We're almost
@@ -116,7 +116,7 @@ func wrapMain() error {
 	defer func() {
 		err := os.Remove(keyPath)
 		if err != nil {
-			fmt.Printf("warning: error removing token file: %s\n", err)
+			fmt.Printf("Warning: error removing token file: %s\n", err)
 		}
 	}()
 
@@ -126,12 +126,12 @@ func wrapMain() error {
 
 	err = runner.Run(vargs.GCloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
-		return fmt.Errorf("error: %s\n", err)
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	err = runner.Run(vargs.GCloudCmd, "container", "clusters", "get-credentials", vargs.Cluster, "--project", vargs.Project, "--zone", vargs.Zone)
 	if err != nil {
-		return fmt.Errorf("error: %s\n", err)
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	data := map[string]interface{}{
@@ -155,10 +155,10 @@ func wrapMain() error {
 	}
 
 	for k, v := range vargs.Vars {
-		// Don't allow vars to be overriden. We do this to ensure that the
-		// built-in template vars (above) can be relied upon.
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
 		if _, ok := data[k]; ok {
-			return fmt.Errorf("var %q shadows existing var\n", k)
+			return fmt.Errorf("Error: var %q shadows existing var\n", k)
 		}
 
 		data[k] = v
@@ -197,9 +197,9 @@ func wrapMain() error {
 		_, err := os.Stat(inPath)
 		if os.IsNotExist(err) {
 			if t == vargs.Template {
-				return fmt.Errorf("error finding template: %s\n", err)
+				return fmt.Errorf("Error finding template: %s\n", err)
 			} else {
-				fmt.Println("skipping optional template %s, it was not found\n", t)
+				fmt.Printf("Warning: skipping optional template %s, it was not found\n", t)
 				continue
 			}
 		}
@@ -207,23 +207,23 @@ func wrapMain() error {
 		// Generate the file
 		blob, err := ioutil.ReadFile(inPath)
 		if err != nil {
-			return fmt.Errorf("error reading template: %s\n", err)
+			return fmt.Errorf("Error reading template: %s\n", err)
 		}
 
 		tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
 		if err != nil {
-			return fmt.Errorf("error parsing template: %s\n", err)
+			return fmt.Errorf("Error parsing template: %s\n", err)
 		}
 
 		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
 		f, err := os.Create(outPaths[t])
 		if err != nil {
-			return fmt.Errorf("error creating deployment file: %s\n", err)
+			return fmt.Errorf("Error creating deployment file: %s\n", err)
 		}
 
 		err = tmpl.Execute(f, content)
 		if err != nil {
-			return fmt.Errorf("error executing deployment template: %s\n", err)
+			return fmt.Errorf("Error executing deployment template: %s\n", err)
 		}
 
 		f.Close()
@@ -236,13 +236,13 @@ func wrapMain() error {
 	}
 
 	if vargs.DryRun {
-		fmt.Printf("skipping kubectl apply, because dry_run=true\n")
+		fmt.Println("Skipping kubectl apply, because dry_run: true")
 		return nil
 	}
 
 	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
 	if err != nil {
-		return fmt.Errorf("error: %s\n", err)
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	return nil
