@@ -138,5 +138,5 @@ metadata:
 type: Opaque
 
 data:
-  github-token: {{.secrets.GITHUB_TOKEN}}
+  github-token: {{.GITHUB_TOKEN}}
 ```
