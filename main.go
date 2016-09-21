@@ -79,14 +79,6 @@ func wrapMain() error {
 		return fmt.Errorf("Missing required param: zone")
 	}
 
-	if vargs.Template == "" {
-		vargs.Template = ".kube.yml"
-	}
-
-	if vargs.SecretTemplate == "" {
-		vargs.SecretTemplate = ".kube.sec.yml"
-	}
-
 	sdkPath := "/google-cloud-sdk"
 	keyPath := "/tmp/gcloud.json"
 
@@ -100,6 +92,14 @@ func wrapMain() error {
 		vargs.KubectlCmd = fmt.Sprintf("%s/bin/kubectl", sdkPath)
 	}
 
+	if vargs.Template == "" {
+		vargs.Template = ".kube.yml"
+	}
+
+	if vargs.SecretTemplate == "" {
+		vargs.SecretTemplate = ".kube.sec.yml"
+	}
+
 	// Trim whitespace, to forgive the vagaries of YAML parsing.
 	vargs.Token = strings.TrimSpace(vargs.Token)
 
@@ -110,9 +110,8 @@ func wrapMain() error {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
 
-	// Warn if the keyfile can't be deleted, but don't abort. We're almost
-	// certainly running inside an ephemeral container, so the file will be
-	// discarded when we're finished anyway.
+	// Warn if the keyfile can't be deleted, but don't abort.
+	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
 	defer func() {
 		err := os.Remove(keyPath)
 		if err != nil {
@@ -142,14 +141,13 @@ func wrapMain() error {
 		"TAG":          "", // How?
 
 		// https://godoc.org/github.com/drone/drone-plugin-go/plugin#Workspace
-
 		"workspace": workspace,
 		"repo":      repo,
 		"build":     build,
 		"system":    system,
 
-		// Misc useful stuff. Note that we don't include all of the vargs, since
-		// that includes the GCP token.
+		// Misc useful stuff.
+		// Note that we don't include all of the vargs, since that includes the GCP token.
 		"project": vargs.Project,
 		"cluster": vargs.Cluster,
 	}
@@ -172,11 +170,10 @@ func wrapMain() error {
 
 	secrets := map[string]interface{}{}
 	for k, v := range vargs.Secrets {
-		// Base64 encode secret strings.
+		// Base64 encode secret strings
 		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v.(string)))
 	}
 
-	// TODO: infer these filenames & check for presence
 	mapping := map[string]map[string]interface{}{
 		vargs.Template:       data,
 		vargs.SecretTemplate: secrets,
