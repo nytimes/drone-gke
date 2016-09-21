@@ -135,7 +135,6 @@ func wrapMain() error {
 	}
 
 	data := map[string]interface{}{
-
 		// http://readme.drone.io/usage/variables/#string-interpolation:2b8b8ac4006be88c769f5e3fd99b009a
 		"BUILD_NUMBER": build.Number,
 		"COMMIT":       build.Commit,
@@ -193,6 +192,17 @@ func wrapMain() error {
 
 		inPath := filepath.Join(workspace.Path, t)
 		bn := filepath.Base(inPath)
+
+		// Ensure the required template file exists
+		_, err := os.Stat(inPath)
+		if os.IsNotExist(err) {
+			if t == vargs.Template {
+				return fmt.Errorf("error finding template: %s\n", err)
+			} else {
+				fmt.Println("skipping optional template %s, it was not found\n", t)
+				continue
+			}
+		}
 
 		// Generate the file
 		blob, err := ioutil.ReadFile(inPath)
