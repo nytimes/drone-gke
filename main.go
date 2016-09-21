@@ -79,6 +79,14 @@ func wrapMain() error {
 		return fmt.Errorf("missing required param: zone")
 	}
 
+	if vargs.Template == "" {
+		vargs.Template = ".kube.yml"
+	}
+
+	if vargs.SecretTemplate == "" {
+		vargs.SecretTemplate = ".kube.sec.yml"
+	}
+
 	sdkPath := "/google-cloud-sdk"
 	keyPath := "/tmp/gcloud.json"
 
