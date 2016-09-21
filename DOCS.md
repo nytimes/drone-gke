@@ -16,15 +16,15 @@ The following parameters are used to configure this plugin:
 * `zone` - zone of the container cluster
 * `cluster` - name of the container cluster
 * `token` - service account's JSON credentials
-* `template` - Kubernetes template (like the [deployment object](http://kubernetes.io/docs/user-guide/deployments/))
-* *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/)
+* *optional* `template` - Kubernetes template (like the [deployment object](http://kubernetes.io/docs/user-guide/deployments/)) (defaults to `.kube.yml`)
+* *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/) (defaults to `.kube.sec.yml`)
 * `vars` - variables to use in `template`
 * `secrets` - variables to use in `secret_template`
 
 Optional (useful for debugging):
 
-* `dry_run` - do not apply the Kubernetes templates
-* `verbose` - dump available `vars` and the generated Kubernetes template (excluding secrets)
+* `dry_run` - do not apply the Kubernetes templates (defaults to `false`)
+* `verbose` - dump available `vars` and the generated Kubernetes `template` (excluding secrets) (defaults to `false`)
 
 ## Templates
 
@@ -65,8 +65,6 @@ deploy:
     token: >
       $$GOOGLE_CREDENTIALS
 
-    template: .kube.yml
-    secret_template: .kube.sec.yml
     vars:
       image: gcr.io/project-1/my-app:$$COMMIT
       app: my-app
