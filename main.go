@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,16 +14,18 @@ import (
 )
 
 type GKE struct {
-	DryRun     bool                   `json:"dry_run"`
-	Verbose    bool                   `json:"verbose"`
-	Token      string                 `json:"token"`
-	GCloudCmd  string                 `json:"gcloud_cmd"`
-	KubectlCmd string                 `json:"kubectl_cmd"`
-	Project    string                 `json:"project"`
-	Zone       string                 `json:"zone"`
-	Cluster    string                 `json:"cluster"`
-	Template   string                 `json:"template"`
-	Vars       map[string]interface{} `json:"vars"`
+	DryRun         bool                   `json:"dry_run"`
+	Verbose        bool                   `json:"verbose"`
+	Token          string                 `json:"token"`
+	GCloudCmd      string                 `json:"gcloud_cmd"`
+	KubectlCmd     string                 `json:"kubectl_cmd"`
+	Project        string                 `json:"project"`
+	Zone           string                 `json:"zone"`
+	Cluster        string                 `json:"cluster"`
+	Template       string                 `json:"template"`
+	SecretTemplate string                 `json:"secret_template"`
+	Vars           map[string]interface{} `json:"vars"`
+	Secrets        map[string]interface{} `json:"secrets"`
 }
 
 var (
@@ -61,7 +64,7 @@ func wrapMain() error {
 	// Check required params
 
 	if vargs.Token == "" {
-		return fmt.Errorf("missing required param: token")
+		return fmt.Errorf("Missing required param: token")
 	}
 
 	if vargs.Project == "" {
@@ -69,11 +72,11 @@ func wrapMain() error {
 	}
 
 	if vargs.Project == "" {
-		return fmt.Errorf("missing required param: project")
+		return fmt.Errorf("Missing required param: project")
 	}
 
 	if vargs.Zone == "" {
-		return fmt.Errorf("missing required param: zone")
+		return fmt.Errorf("Missing required param: zone")
 	}
 
 	sdkPath := "/google-cloud-sdk"
@@ -89,6 +92,14 @@ func wrapMain() error {
 		vargs.KubectlCmd = fmt.Sprintf("%s/bin/kubectl", sdkPath)
 	}
 
+	if vargs.Template == "" {
+		vargs.Template = ".kube.yml"
+	}
+
+	if vargs.SecretTemplate == "" {
+		vargs.SecretTemplate = ".kube.sec.yml"
+	}
+
 	// Trim whitespace, to forgive the vagaries of YAML parsing.
 	vargs.Token = strings.TrimSpace(vargs.Token)
 
@@ -96,16 +107,15 @@ func wrapMain() error {
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(vargs.Token), 0600)
 	if err != nil {
-		return fmt.Errorf("error writing token file: %s\n", err)
+		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
 
-	// Warn if the keyfile can't be deleted, but don't abort. We're almost
-	// certainly running inside an ephemeral container, so the file will be
-	// discarded when we're finished anyway.
+	// Warn if the keyfile can't be deleted, but don't abort.
+	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
 	defer func() {
 		err := os.Remove(keyPath)
 		if err != nil {
-			fmt.Printf("warning: error removing token file: %s\n", err)
+			fmt.Printf("Warning: error removing token file: %s\n", err)
 		}
 	}()
 
@@ -115,30 +125,15 @@ func wrapMain() error {
 
 	err = runner.Run(vargs.GCloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
-		return fmt.Errorf("error: %s\n", err)
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	err = runner.Run(vargs.GCloudCmd, "container", "clusters", "get-credentials", vargs.Cluster, "--project", vargs.Project, "--zone", vargs.Zone)
 	if err != nil {
-		return fmt.Errorf("error: %s\n", err)
-	}
-
-	inPath := filepath.Join(workspace.Path, vargs.Template)
-	bn := filepath.Base(inPath)
-
-	// Generate the deployment file
-	blob, err := ioutil.ReadFile(inPath)
-	if err != nil {
-		return fmt.Errorf("error reading template: %s\n", err)
-	}
-
-	tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
-	if err != nil {
-		return fmt.Errorf("error parsing template: %s\n", err)
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	data := map[string]interface{}{
-
 		// http://readme.drone.io/usage/variables/#string-interpolation:2b8b8ac4006be88c769f5e3fd99b009a
 		"BUILD_NUMBER": build.Number,
 		"COMMIT":       build.Commit,
@@ -146,60 +141,105 @@ func wrapMain() error {
 		"TAG":          "", // How?
 
 		// https://godoc.org/github.com/drone/drone-plugin-go/plugin#Workspace
-
 		"workspace": workspace,
 		"repo":      repo,
 		"build":     build,
 		"system":    system,
 
-		// Misc useful stuff. Note that we don't include all of the vargs, since
-		// that includes the GCP token.
+		// Misc useful stuff.
+		// Note that we don't include all of the vargs, since that includes the GCP token.
 		"project": vargs.Project,
 		"cluster": vargs.Cluster,
 	}
 
 	for k, v := range vargs.Vars {
-
-		// Don't allow vars to be overriden. We do this to ensure that the
-		// built-in template vars (above) can be relied upon.
-		_, ok := data[k]
-		if ok {
-			return fmt.Errorf("var %q shadows existing var\n", k)
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
+		if _, ok := data[k]; ok {
+			return fmt.Errorf("Error: var %q shadows existing var\n", k)
 		}
 
 		data[k] = v
 	}
 
-	outPath := fmt.Sprintf("/tmp/%s", bn)
-	f, err := os.Create(outPath)
-	if err != nil {
-		return fmt.Errorf("error creating deployment file: %s\n", err)
+	if vargs.Verbose {
+		dump := data
+		delete(dump, "workspace")
+		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
+	}
+
+	secrets := map[string]interface{}{}
+	for k, v := range vargs.Secrets {
+		// Base64 encode secret strings
+		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v.(string)))
+	}
+
+	mapping := map[string]map[string]interface{}{
+		vargs.Template:       data,
+		vargs.SecretTemplate: secrets,
+	}
+
+	outPaths := make(map[string]string)
+	pathArg := []string{}
+
+	for t, content := range mapping {
+		if t == "" {
+			continue
+		}
+
+		inPath := filepath.Join(workspace.Path, t)
+		bn := filepath.Base(inPath)
+
+		// Ensure the required template file exists
+		_, err := os.Stat(inPath)
+		if os.IsNotExist(err) {
+			if t == vargs.Template {
+				return fmt.Errorf("Error finding template: %s\n", err)
+			} else {
+				fmt.Printf("Warning: skipping optional template %s, it was not found\n", t)
+				continue
+			}
+		}
+
+		// Generate the file
+		blob, err := ioutil.ReadFile(inPath)
+		if err != nil {
+			return fmt.Errorf("Error reading template: %s\n", err)
+		}
+
+		tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
+		if err != nil {
+			return fmt.Errorf("Error parsing template: %s\n", err)
+		}
+
+		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
+		f, err := os.Create(outPaths[t])
+		if err != nil {
+			return fmt.Errorf("Error creating deployment file: %s\n", err)
+		}
+
+		err = tmpl.Execute(f, content)
+		if err != nil {
+			return fmt.Errorf("Error executing deployment template: %s\n", err)
+		}
+
+		f.Close()
+
+		pathArg = append(pathArg, outPaths[t])
 	}
 
 	if vargs.Verbose {
-		dumpData(os.Stdout, "DATA", data)
-	}
-
-	err = tmpl.Execute(f, data)
-	if err != nil {
-		return fmt.Errorf("error executing deployment template: %s\n", err)
-	}
-
-	// TODO: Move this to defer
-	f.Close()
-
-	if vargs.Verbose {
-		dumpFile(os.Stdout, "DEPLOYMENT", outPath)
+		dumpFile(os.Stdout, "DEPLOYMENT (Secret Template Omitted)", outPaths[vargs.Template])
 	}
 
 	if vargs.DryRun {
-		fmt.Printf("skipping kubectl apply, because dry_run=true\n")
+		fmt.Println("Skipping kubectl apply, because dry_run: true")
 		return nil
 	}
 
-	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", outPath)
+	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
 	if err != nil {
-		return fmt.Errorf("error: %s\n", err)
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	return nil
