@@ -25,7 +25,7 @@ type GKE struct {
 	Template       string                 `json:"template"`
 	SecretTemplate string                 `json:"secret_template"`
 	Vars           map[string]interface{} `json:"vars"`
-	Secrets        map[string]interface{} `json:"secrets"`
+	Secrets        map[string]string      `json:"secrets"`
 }
 
 var (
@@ -171,7 +171,7 @@ func wrapMain() error {
 	secrets := map[string]interface{}{}
 	for k, v := range vargs.Secrets {
 		// Base64 encode secret strings
-		secrets[k] = base64.StdEncoding.EncodeToString([]byte(string(v)))
+		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
 		fmt.Println("secrets[%s]: %v\n", k, secrets[k])
 	}
 
