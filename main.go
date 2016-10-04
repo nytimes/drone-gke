@@ -172,6 +172,7 @@ func wrapMain() error {
 	for k, v := range vargs.Secrets {
 		// Base64 encode secret strings
 		secrets[k] = base64.StdEncoding.EncodeToString([]byte(string(v)))
+		fmt.Println("secrets[%s]: %v\n", k, secrets[k])
 	}
 
 	mapping := map[string]map[string]interface{}{
