@@ -18,8 +18,8 @@ The following parameters are used to configure this plugin:
 * `token` - service account's JSON credentials
 * *optional* `template` - Kubernetes template (like the [deployment object](http://kubernetes.io/docs/user-guide/deployments/)) (defaults to `.kube.yml`)
 * *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/) (defaults to `.kube.sec.yml`)
-* `vars` - variables to use in `template`
-* `secrets` - variables to use in `secret_template`
+* `vars` - variables to use in `template` and `secret_template`
+* `secrets` - variables to use in `secret_template` that will be base64 encoded.
 
 Optional (useful for debugging):
 

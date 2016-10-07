@@ -168,10 +168,27 @@ func wrapMain() error {
 		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
 	}
 
+	// Populate secrets with variables.
 	secrets := map[string]interface{}{}
 	for k, v := range vargs.Secrets {
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
+		if _, ok := secrets[k]; ok {
+			return fmt.Errorf("Error: secrets var %q shadows existing secrets var\n", k)
+		}
+
 		// Base64 encode secret strings
 		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
+	}
+
+	for k, v := range vargs.Vars {
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
+		if _, ok := secrets[k]; ok {
+			return fmt.Errorf("Error: var %q shadows existing secrets var\n", k)
+		}
+
+		secrets[k] = v
 	}
 
 	mapping := map[string]map[string]interface{}{
