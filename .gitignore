@@ -1,2 +1,4 @@
+/vendor
+
 /.drone.sec.yml
 /drone-gke
