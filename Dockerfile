@@ -1,6 +1,6 @@
 FROM alpine:3.4
 
-ENV GOOGLE_CLOUD_SDK_VERSION=122.0.0
+ENV GOOGLE_CLOUD_SDK_VERSION=132.0.0
 
 RUN apk add --no-cache curl python
 
