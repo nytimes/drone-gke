@@ -22,6 +22,7 @@ type GKE struct {
 	Project        string                 `json:"project"`
 	Zone           string                 `json:"zone"`
 	Cluster        string                 `json:"cluster"`
+	Namespace      string                 `json:"namespace"`
 	Template       string                 `json:"template"`
 	SecretTemplate string                 `json:"secret_template"`
 	Vars           map[string]interface{} `json:"vars"`
@@ -61,7 +62,7 @@ func wrapMain() error {
 	plugin.Param("vargs", &vargs)
 	plugin.MustParse()
 
-	// Check required params
+	// Check required params.
 
 	if vargs.Token == "" {
 		return fmt.Errorf("Missing required param: token")
@@ -82,7 +83,7 @@ func wrapMain() error {
 	sdkPath := "/google-cloud-sdk"
 	keyPath := "/tmp/gcloud.json"
 
-	// Defaults
+	// Defaults.
 
 	if vargs.GCloudCmd == "" {
 		vargs.GCloudCmd = fmt.Sprintf("%s/bin/gcloud", sdkPath)
@@ -148,8 +149,10 @@ func wrapMain() error {
 
 		// Misc useful stuff.
 		// Note that we don't include all of the vargs, since that includes the GCP token.
-		"project": vargs.Project,
-		"cluster": vargs.Cluster,
+		"project":   vargs.Project,
+		"zone":      vargs.Zone,
+		"cluster":   vargs.Cluster,
+		"namespace": vargs.Namespace,
 	}
 
 	for k, v := range vargs.Vars {
@@ -170,7 +173,7 @@ func wrapMain() error {
 
 	secrets := map[string]interface{}{}
 	for k, v := range vargs.Secrets {
-		// Base64 encode secret strings
+		// Base64 encode secret strings.
 		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v.(string)))
 	}
 
@@ -190,7 +193,7 @@ func wrapMain() error {
 		inPath := filepath.Join(workspace.Path, t)
 		bn := filepath.Base(inPath)
 
-		// Ensure the required template file exists
+		// Ensure the required template file exists.
 		_, err := os.Stat(inPath)
 		if os.IsNotExist(err) {
 			if t == vargs.Template {
@@ -201,7 +204,7 @@ func wrapMain() error {
 			}
 		}
 
-		// Generate the file
+		// Generate the file.
 		blob, err := ioutil.ReadFile(inPath)
 		if err != nil {
 			return fmt.Errorf("Error reading template: %s\n", err)
@@ -237,6 +240,19 @@ func wrapMain() error {
 		return nil
 	}
 
+	// Set the execution namespace.
+	if len(vargs.Namespace) > 0 {
+		fmt.Printf("Configuring kubectl to the %s namespace\n", vargs.Namespace)
+
+		context := strings.Join([]string{"gke", vargs.Project, vargs.Zone, vargs.Cluster}, "_")
+
+		err = runner.Run(vargs.KubectlCmd, "config", "set-context", context, "--namespace", vargs.Namespace)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+	}
+
+	// Apply Kubernetes configuration files.
 	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
