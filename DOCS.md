@@ -20,6 +20,8 @@ The following parameters are used to configure this plugin:
 * *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/) (defaults to `.kube.sec.yml`)
 * `vars` - variables to use in `template`
 * `secrets` - variables to use in `secret_template`
+* `pre` - commands to run before applying the Kubernetes files
+* `post` - commands to run after applying the Kubernetes files
 
 Optional (useful for debugging):
 
@@ -72,6 +74,11 @@ deploy:
       NAME: example
     secrets:
       github_token: $$GITHUB_TOKEN
+
+    pre:
+      - kubectl get pods
+    post:
+      - kubectl get pods
 
     when:
       event: push
