@@ -33,6 +33,14 @@ var (
 	rev string
 )
 
+var nsTemplate = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+`
+
 func main() {
 	err := wrapMain()
 	if err != nil {
@@ -247,6 +255,22 @@ func wrapMain() error {
 		context := strings.Join([]string{"gke", vargs.Project, vargs.Zone, vargs.Cluster}, "_")
 
 		err = runner.Run(vargs.KubectlCmd, "config", "set-context", context, "--namespace", vargs.Namespace)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+
+		resource := fmt.Sprintf(nsTemplate, vargs.Namespace)
+		nsPath := "/tmp/namespace.json"
+
+		// Write namespace resource file to tmp file to be picked up by the 'kubectl' command.
+		// This is inside the ephemeral plugin container, not on the host.
+		err := ioutil.WriteFile(nsPath, []byte(resource), 0600)
+		if err != nil {
+			return fmt.Errorf("Error writing namespace resource file: %s\n", err)
+		}
+
+		// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
+		err = runner.Run(vargs.KubectlCmd, "apply", "--filename", nsPath)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
