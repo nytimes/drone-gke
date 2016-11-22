@@ -32,7 +32,6 @@ func (e *Environ) Run(name string, arg ...string) error {
 	cmd.Stderr = e.stderr
 
 	// TODO: Extract this
-	fmt.Println()
 	fmt.Println("$", strings.Join(cmd.Args, " "))
 	//--
 

@@ -26,6 +26,8 @@ type GKE struct {
 	SecretTemplate string                 `json:"secret_template"`
 	Vars           map[string]interface{} `json:"vars"`
 	Secrets        map[string]interface{} `json:"secrets"`
+	Pre            []string               `json:"pre"`
+	Post           []string               `json:"post"`
 }
 
 var (
@@ -233,13 +235,34 @@ func wrapMain() error {
 	}
 
 	if vargs.DryRun {
-		fmt.Println("Skipping kubectl apply, because dry_run: true")
+		fmt.Println("Skipping commands, because dry_run: true")
 		return nil
 	}
 
+	// Pre
+	for _, v := range vargs.Pre {
+		cmds := strings.Split(v, " ")
+
+		err = runner.Run(cmds[0], cmds[1:]...)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+	}
+
+	// Kubectl
 	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	// Post
+	for _, v := range vargs.Post {
+		cmds := strings.Split(v, " ")
+
+		err = runner.Run(cmds[0], cmds[1:]...)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
 	}
 
 	return nil
