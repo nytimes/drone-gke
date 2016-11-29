@@ -1,9 +1,10 @@
 # drone-gke
 
-Drone plugin to deploy images to Kubernetes on Google Container Engine.
+Drone plugin to deploy container images to Kubernetes on Google Container Engine.
 For the usage information and a listing of the available options please take a look at [the docs](DOCS.md).
 
-This is a little simpler than deploying straight to Kube, because the api endpoints and credentials and whatnot can be derived using the Google credentials.
+This is a little simpler than deploying straight to Kubernetes, because the API endpoints and credentials can be derived using the Google credentials.
+In addition, this opens the yaml file to templatization and customization with each Drone build.
 
 ## Development
 
@@ -12,6 +13,11 @@ This is a little simpler than deploying straight to Kube, because the api endpoi
 ```bash
 go build
 ```
+
+## Testing
+
+**This could use your contribution!**
+Help us create a runnable test suite.
 
 ## See also
 
