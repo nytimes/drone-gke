@@ -37,10 +37,15 @@ For details about the JSON Token, please view the [drone-gcr plugin](https://git
 ```yml
 build:
   image: golang:1.7
+
+  environment:
+    - GOPATH=/drone
+
   commands:
     - go get -t
     - go test -v -cover
     - CGO_ENABLED=0 go build -v -a
+
   when:
     event:
       - push
@@ -48,7 +53,8 @@ build:
 
 publish:
   gcr:
-    repo: project-1/my-app
+    storage_driver: overlay
+    repo: my-gke-project/my-app
     tag: "$$COMMIT"
     token: >
       $$GOOGLE_CREDENTIALS
@@ -68,12 +74,11 @@ deploy:
       $$GOOGLE_CREDENTIALS
 
     vars:
-      image: gcr.io/project-1/my-app:$$COMMIT
+      image: gcr.io/my-gke-project/my-app:$$COMMIT
       app: my-app
       env: dev
-      NAME: example
     secrets:
-      github_token: $$GITHUB_TOKEN
+      api_token: $$API_TOKEN
 
     when:
       event: push
@@ -82,11 +87,11 @@ deploy:
 
 Example `.kube.yml`, notice the two yml configs separated by `---`:
 ```yml
-apiVersion: extensions/v1beta1
 kind: Deployment
+apiVersion: extensions/v1beta1
 
 metadata:
-  name: {{.app}}-{{.env}}-deployment
+  name: {{.app}}-{{.env}}
 
 spec:
   replicas: 3
@@ -102,19 +107,19 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: NAME
-              value: {{.NAME}}
-            - name: GITHUB_TOKEN
+            - name: APP_NAME
+              value: {{.app}}
+            - name: API_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: secrets
-                  key: github-token
+                  key: api-token
 ---
-apiVersion: v1
 kind: Service
+apiVersion: v1
 
 metadata:
-  name: {{.app}}-{{.env}}-svc
+  name: {{.app}}-{{.env}}
 
 spec:
   type: LoadBalancer
@@ -129,8 +134,8 @@ protocol: TCP
 
 `.kube.sec.yml`, templated output will not be dumped when debugging:
 ```yml
-apiVersion: v1
 kind: Secret
+apiVersion: v1
 
 metadata:
   name: secrets
@@ -138,5 +143,5 @@ metadata:
 type: Opaque
 
 data:
-  github-token: {{.GITHUB_TOKEN}}
+  api-token: {{.api_token}}
 ```
