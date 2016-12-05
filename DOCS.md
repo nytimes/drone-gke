@@ -141,3 +141,9 @@ type: Opaque
 data:
   api-token: {{.api_token}}
 ```
+
+## JSON Token
+
+See documentation from the [drone-gcr][drone-gcr] plugin on setting the JSON token.
+
+[drone-gcr]: https://github.com/drone-plugins/drone-gcr/blob/master/DOCS.md#json-token
