@@ -1,7 +1,3 @@
-**This is currently very new and unstable.**
-
-Please don't use it for anything important!
-
 Use this plugin to deploy Docker images to Google Container Engine (GKE).
 Please read the GKE [documentation](https://cloud.google.com/container-engine/) before you begin.
 You will need to generate a service account and use it's [JSON credential file](https://cloud.google.com/storage/docs/authentication#service_accounts) to authenticate.
