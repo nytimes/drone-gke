@@ -7,7 +7,10 @@ go:
   - 1.7
 
 env:
-  - CGO_ENABLED=0
+  global:
+    - CGO_ENABLED=0
+    - GOOS=linux
+    - GOARCH=amd64
 
 script:
   - go vet
