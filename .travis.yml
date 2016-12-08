@@ -15,7 +15,7 @@ env:
 script:
   - go vet
   - go test
-  - go build -ldflags "-s -w -X main.build=$TRAVIS_BUILD_NUMBER -X main.rev=$TRAVIS_COMMIT" -a -tags netgo
+  - go build -a -ldflags "-X main.rev=$TRAVIS_COMMIT"
   - docker build -t "nytimes/drone-gke:latest" .
 
 after_success:
