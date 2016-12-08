@@ -1,0 +1,22 @@
+language: go
+
+services:
+  - docker
+
+go:
+  - 1.7
+
+env:
+  - CGO_ENABLED=0
+
+script:
+  - go vet
+  - go test
+  - go build -ldflags "-s -w -X main.build=$TRAVIS_BUILD_NUMBER -X main.rev=$TRAVIS_COMMIT" -a -tags netgo
+
+after_success:
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+    docker build -t "nytimes/drone-gke:latest" .;
+    docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+    docker push "nytimes/drone-gke:latest";
+    fi
