@@ -26,7 +26,7 @@ type GKE struct {
 	Template       string                 `json:"template"`
 	SecretTemplate string                 `json:"secret_template"`
 	Vars           map[string]interface{} `json:"vars"`
-	Secrets        map[string]string      `json:"secrets"`
+	Secrets        map[string]interface{} `json:"secrets"`
 }
 
 var (
@@ -181,8 +181,12 @@ func wrapMain() error {
 
 	secrets := map[string]interface{}{}
 	for k, v := range vargs.Secrets {
+		if v == nil {
+			return fmt.Errorf("Error: secret var %q is nil (empty string)\n", k)
+		}
+
 		// Base64 encode secret strings.
-		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
+		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v.(string)))
 	}
 
 	mapping := map[string]map[string]interface{}{
