@@ -16,7 +16,8 @@ The following parameters are used to configure this plugin:
 * *optional* `template` - Kubernetes template (like the [deployment object](http://kubernetes.io/docs/user-guide/deployments/)) (defaults to `.kube.yml`)
 * *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/) (defaults to `.kube.sec.yml`)
 * `vars` - variables to use in `template`
-* `secrets` - variables to use in `secret_template`
+* `secrets` - variables to use in `secret_template`. These are base64 encoded by the plugin.
+* `secrets_base64` - variables to use in `secret_template`. These are NOT base64 encoded by the plugin.
 
 Optional (useful for debugging):
 
@@ -75,6 +76,8 @@ deploy:
       env: dev
     secrets:
       api_token: $$API_TOKEN
+    secrets_base64:
+      p12_cert: $$P12_CERT
 
     when:
       event: push
@@ -140,6 +143,7 @@ type: Opaque
 
 data:
   api-token: {{.api_token}}
+  p12-cert: {{.p12_cert}}
 ```
 
 ## JSON Token
