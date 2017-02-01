@@ -27,6 +27,11 @@ type GKE struct {
 	SecretTemplate string                 `json:"secret_template"`
 	Vars           map[string]interface{} `json:"vars"`
 	Secrets        map[string]string      `json:"secrets"`
+
+	// SecretsBase64 holds secret values which are already base64 encoded and
+	// thus don't need to be re-encoded as they would be if they were in
+	// the Secrets field.
+	SecretsBase64 map[string]string `json:"secrets_base64"`
 }
 
 var (
@@ -187,6 +192,16 @@ func wrapMain() error {
 
 		// Base64 encode secret strings.
 		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
+	}
+	for k, v := range vargs.SecretsBase64 {
+		if _, ok := secrets[k]; ok {
+			return fmt.Errorf("Error: secret var %q is already set in Secrets\n", k)
+		}
+		if v == "" {
+			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
+		}
+		// Don't base64 encode these secrets, they already are.
+		secrets[k] = v
 	}
 
 	mapping := map[string]map[string]interface{}{
