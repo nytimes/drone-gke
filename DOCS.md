@@ -17,7 +17,7 @@ The following parameters are used to configure this plugin:
 * *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/) (defaults to `.kube.sec.yml`)
 * `vars` - variables to use in `template`
 * `secrets` - variables to use in `secret_template`. These are base64 encoded by the plugin.
-* `secrets_base64` - variables to use in `secret_template`. These are NOT base64 encoded by the plugin.
+* `secrets_base64` - variables to use in `secret_template`. These should already be base64 encoded; the plugin will not do so.
 
 Optional (useful for debugging):
 
