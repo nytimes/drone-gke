@@ -18,7 +18,6 @@ The following parameters are used to configure this plugin:
 * `vars` - variables to use in `template`
 * `secrets` - variables to use in `secret_template`. These are base64 encoded by the plugin.
 * `secrets_base64` - variables to use in `secret_template`. These should already be base64 encoded; the plugin will not do so.
-* `pre` - commands to run before applying the Kubernetes files
 * `post` - commands to run after applying the Kubernetes files
 
 Optional (useful for debugging):
@@ -81,8 +80,6 @@ deploy:
     secrets_base64:
       p12_cert: $$P12_CERT
 
-    pre:
-      - kubectl get pods
     post:
       - kubectl get pods
 

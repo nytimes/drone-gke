@@ -32,7 +32,6 @@ type GKE struct {
 	// thus don't need to be re-encoded as they would be if they were in
 	// the Secrets field.
 	SecretsBase64 map[string]string `json:"secrets_base64"`
-	Pre           []string          `json:"pre"`
 	Post          []string          `json:"post"`
 }
 
@@ -292,16 +291,6 @@ func wrapMain() error {
 
 		// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
 		err = runner.Run(vargs.KubectlCmd, "apply", "--filename", nsPath)
-		if err != nil {
-			return fmt.Errorf("Error: %s\n", err)
-		}
-	}
-
-	// Pre
-	for _, v := range vargs.Pre {
-		cmds := strings.Split(v, " ")
-
-		err = runner.Run(cmds[0], cmds[1:]...)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
