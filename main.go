@@ -95,6 +95,7 @@ func wrapMain() error {
 
 	sdkPath := "/google-cloud-sdk"
 	keyPath := "/tmp/gcloud.json"
+	kubePath := "/tmp/kube"
 
 	// Defaults.
 
@@ -209,6 +210,11 @@ func wrapMain() error {
 		vargs.SecretTemplate: secrets,
 	}
 
+	err = os.MkdirAll(kubePath, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("Error creating template directory: %s\n", err)
+	}
+
 	outPaths := make(map[string]string)
 	pathArg := []string{}
 
@@ -242,7 +248,7 @@ func wrapMain() error {
 			return fmt.Errorf("Error parsing template: %s\n", err)
 		}
 
-		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
+		outPaths[t] = fmt.Sprintf("%s/%s", kubePath, bn)
 		f, err := os.Create(outPaths[t])
 		if err != nil {
 			return fmt.Errorf("Error creating deployment file: %s\n", err)
@@ -279,7 +285,7 @@ func wrapMain() error {
 		}
 
 		resource := fmt.Sprintf(nsTemplate, vargs.Namespace)
-		nsPath := "/tmp/namespace.json"
+		nsPath := fmt.Sprintf("%s/namespace.json", kubePath)
 
 		// Write namespace resource file to tmp file to be picked up by the 'kubectl' command.
 		// This is inside the ephemeral plugin container, not on the host.
