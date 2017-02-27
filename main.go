@@ -32,7 +32,7 @@ type GKE struct {
 	// thus don't need to be re-encoded as they would be if they were in
 	// the Secrets field.
 	SecretsBase64 map[string]string `json:"secrets_base64"`
-	Post          []string          `json:"post"`
+	PostCmds      []string          `json:"post_cmds"`
 }
 
 var (
@@ -302,8 +302,8 @@ func wrapMain() error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	// Post
-	for _, v := range vargs.Post {
+	// Post commands
+	for _, v := range vargs.PostCmds {
 		cmds := strings.Split(v, " ")
 
 		err = runner.Run(cmds[0], cmds[1:]...)
