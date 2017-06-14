@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/drone/drone-plugin-go/plugin"
+	"github.com/urfave/cli"
 )
 
 type GKE struct {
@@ -32,6 +32,13 @@ type GKE struct {
 	// thus don't need to be re-encoded as they would be if they were in
 	// the Secrets field.
 	SecretsBase64 map[string]string `json:"secrets_base64"`
+}
+
+type BUILD struct {
+	Number string
+	Commit string
+	Branch string
+	Tag    string
 }
 
 var (
@@ -61,19 +68,148 @@ func wrapMain() error {
 
 	fmt.Printf("Drone GKE Plugin built from %s\n", rev)
 
-	// https://godoc.org/github.com/drone/drone-plugin-go/plugin
-	workspace := plugin.Workspace{}
-	repo := plugin.Repo{}
-	build := plugin.Build{}
-	system := plugin.System{}
-	vargs := GKE{}
+	app := cli.NewApp()
+	app.Name = "gke plugin"
+	app.Usage = "gke plugin"
+	app.Action = run
+	app.Version = fmt.Sprintf("1.0.0-%s", rev)
+	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:   "dry-run",
+			Usage:  "do not apply the Kubernetes templates",
+			EnvVar: "PLUGIN_DRY_RUN",
+		},
+		cli.BoolFlag{
+			Name:   "verbose",
+			Usage:  "dry run disables docker push",
+			EnvVar: "PLUGIN_VERBOSE",
+		},
+		cli.StringFlag{
+			Name:   "token",
+			Usage:  "service account's JSON credentials",
+			EnvVar: "PLUGIN_TOKEN",
+		},
+		cli.StringFlag{
+			Name:   "gcloud-cmd",
+			Usage:  "alternative gcloud cmd",
+			EnvVar: "PLUGIN_GCLOUD_CMD",
+		},
+		cli.StringFlag{
+			Name:   "kubectl-cmd",
+			Usage:  "alternative kubectl cmd",
+			EnvVar: "PLUGIN_KUBECTL_CMD",
+		},
+		cli.StringFlag{
+			Name:   "project",
+			Usage:  "gcp project",
+			EnvVar: "PLUGIN_PROJECT",
+		},
+		cli.StringFlag{
+			Name:   "zone",
+			Usage:  "zone of the container cluster",
+			EnvVar: "PLUGIN_ZONE",
+		},
+		cli.StringFlag{
+			Name:   "cluster",
+			Usage:  "name of the container cluster",
+			EnvVar: "PLUGIN_CLUSTER",
+		},
+		cli.StringFlag{
+			Name:   "namespace",
+			Usage:  "Kubernetes namespace to operate in",
+			EnvVar: "PLUGIN_NAMEPSACE",
+		},
+		cli.StringFlag{
+			Name:   "template",
+			Usage:  "optional - template for e.g. deployments",
+			EnvVar: "PLUGIN_TEMPLATE",
+			Value:  ".kube.yml",
+		},
+		cli.StringFlag{
+			Name:   "secret-template",
+			Usage:  "optional - template for the secret object",
+			EnvVar: "PLUGIN_SECRET_TEMPLATE",
+			Value:  ".kube.sec.yml",
+		},
+		cli.StringFlag{
+			Name:   "vars",
+			Usage:  "variables to use in template",
+			EnvVar: "PLUGIN_VARS",
+		},
+		cli.StringFlag{
+			Name:   "secrets",
+			Usage:  "variables to use in secret_template. These are base64 encoded by the plugin.",
+			EnvVar: "PLUGIN_SECRETS",
+		},
+		cli.StringFlag{
+			Name:   "secrets-base64",
+			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			EnvVar: "PLUGIN_SECRETS_BASE64",
+		},
+		cli.StringFlag{
+			Name:   "drone-build-number",
+			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			EnvVar: "DRONE_BUILD_NUMBER",
+		},
+		cli.StringFlag{
+			Name:   "drone-commit",
+			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			EnvVar: "DRONE_COMMIT",
+		},
+		cli.StringFlag{
+			Name:   "drone-branch",
+			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			EnvVar: "DRONE_BRANCH",
+		},
+		cli.StringFlag{
+			Name:   "drone-tag",
+			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			EnvVar: "DRONE_TAG",
+		},
+	}
 
-	plugin.Param("workspace", &workspace)
-	plugin.Param("repo", &repo)
-	plugin.Param("build", &build)
-	plugin.Param("system", &system)
-	plugin.Param("vargs", &vargs)
-	plugin.MustParse()
+	if err := app.Run(os.Args); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func run(c *cli.Context) error {
+	vargs := GKE{}
+	vargs.DryRun = c.Bool("token")
+	vargs.Verbose = c.Bool("verbose")
+	vargs.Token = c.String("token")
+	vargs.GCloudCmd = c.String("gcloud-cmd")
+	vargs.KubectlCmd = c.String("kubectl-cmd")
+	vargs.Project = c.String("project")
+	vargs.Zone = c.String("zone")
+	vargs.Cluster = c.String("cluster")
+	vargs.Namespace = c.String("namespace")
+	vargs.Template = c.String("template")
+	vargs.SecretTemplate = c.String("secret-template")
+
+	if c.String("vars") != "" {
+		if err := json.Unmarshal([]byte(c.String("vars")), &vargs.Vars); err != nil {
+			panic(err)
+		}
+	}
+	if c.String("secrets") != "" {
+		if err := json.Unmarshal([]byte(c.String("secrets")), &vargs.Secrets); err != nil {
+			panic(err)
+		}
+	}
+	if c.String("secrets-base64") != "" {
+		if err := json.Unmarshal([]byte(c.String("secrets-base64")), &vargs.SecretsBase64); err != nil {
+			panic(err)
+		}
+	}
+
+	build := BUILD{}
+	build.Number = c.String("drone-build-number")
+	build.Commit = c.String("drone-commit")
+	build.Branch = c.String("drone-branch")
+	build.Tag = c.String("drone-tag")
 
 	// Check required params.
 
@@ -135,7 +271,11 @@ func wrapMain() error {
 
 	e := os.Environ()
 	e = append(e, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
-	runner := NewEnviron(workspace.Path, e, os.Stdout, os.Stderr)
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("Error while getting working directory: %s\n", err)
+	}
+	runner := NewEnviron(wd, e, os.Stdout, os.Stderr)
 
 	err = runner.Run(vargs.GCloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
@@ -148,17 +288,17 @@ func wrapMain() error {
 	}
 
 	data := map[string]interface{}{
-		// http://readme.drone.io/usage/variables/#string-interpolation:2b8b8ac4006be88c769f5e3fd99b009a
 		"BUILD_NUMBER": build.Number,
 		"COMMIT":       build.Commit,
 		"BRANCH":       build.Branch,
-		"TAG":          "", // How?
+		"TAG":          build.Tag,
 
 		// https://godoc.org/github.com/drone/drone-plugin-go/plugin#Workspace
-		"workspace": workspace,
-		"repo":      repo,
-		"build":     build,
-		"system":    system,
+		// TODO do we really need these?
+		// "workspace": workspace,
+		// "repo":      repo,
+		// "build":     build,
+		// "system":    system,
 
 		// Misc useful stuff.
 		// Note that we don't include all of the vargs, since that includes the GCP token.
@@ -217,7 +357,7 @@ func wrapMain() error {
 			continue
 		}
 
-		inPath := filepath.Join(workspace.Path, t)
+		inPath := filepath.Join(wd, t)
 		bn := filepath.Base(inPath)
 
 		// Ensure the required template file exists.
