@@ -59,7 +59,7 @@ func wrapMain() error {
 		cli.StringFlag{
 			Name:   "token",
 			Usage:  "service account's JSON credentials",
-			EnvVar: "PLUGIN_TOKEN",
+			EnvVar: "TOKEN",
 		},
 		cli.StringFlag{
 			Name:   "gcloud-cmd",
@@ -109,16 +109,6 @@ func wrapMain() error {
 			EnvVar: "PLUGIN_VARS",
 		},
 		cli.StringFlag{
-			Name:   "secrets",
-			Usage:  "variables to use in secret_template. These are base64 encoded by the plugin.",
-			EnvVar: "PLUGIN_SECRETS",
-		},
-		cli.StringFlag{
-			Name:   "secrets-base64",
-			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
-			EnvVar: "PLUGIN_SECRETS_BASE64",
-		},
-		cli.StringFlag{
 			Name:   "drone-build-number",
 			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
 			EnvVar: "DRONE_BUILD_NUMBER",
@@ -151,24 +141,29 @@ func run(c *cli.Context) error {
 	varsJson := c.String("vars")
 	vars := make(map[string]interface{})
 	if varsJson != "" {
-		if err := json.Unmarshal([]byte(c.String("vars")), &vars); err != nil {
+		if err := json.Unmarshal([]byte(varsJson), &vars); err != nil {
 			panic(err)
 		}
 	}
-	secretsJson := c.String("secrets")
+
 	secrets := make(map[string]string)
-	if secretsJson != "" {
-		if err := json.Unmarshal([]byte(c.String("secrets")), &secrets); err != nil {
-			panic(err)
+	for _, e := range os.Environ() {
+		pair := strings.Split(e, "=")
+		k := pair[0]
+		v := pair[1]
+		if _, ok := secrets[k]; ok {
+			return fmt.Errorf("Error: secret and base64 secret name conflict %q\n", k)
+		} else if v == "" {
+			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
 		}
-	}
-	secretsBase64Json := c.String("serets-base64")
-	secretsBase64 := make(map[string]string)
-	if secretsBase64Json != "" {
-		if err := json.Unmarshal([]byte(c.String("secrets-base64")), &secretsBase64); err != nil {
-			panic(err)
-		}
-	}
+		if strings.HasPrefix(k, "SECRET_BASE64_") {
+			secrets[k] = v
+			os.Unsetenv(k)
+		} else if strings.HasPrefix(k, "SECRET_") {
+			secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
+			os.Unsetenv(k)
+ 		}
+ 	}
 
 	// Check required params.
 
@@ -266,6 +261,7 @@ func run(c *cli.Context) error {
 		"namespace": c.String("namespace"),
 	}
 
+	secretsAndData := map[string]interface{}{}
 	for k, v := range vars {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
@@ -274,6 +270,7 @@ func run(c *cli.Context) error {
 		}
 
 		data[k] = v
+		secretsAndData[k] = v
 	}
 
 	if c.Bool("verbose") {
@@ -282,29 +279,21 @@ func run(c *cli.Context) error {
 		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
 	}
 
-	secretsMap := map[string]interface{}{}
 	for k, v := range secrets {
+		if _, ok := secretsAndData[k]; ok {
+			return fmt.Errorf("Error: secret var %q shadows existing var\n", k)
+		}
 		if v == "" {
 			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
 		}
 
 		// Base64 encode secret strings.
-		secretsMap[k] = base64.StdEncoding.EncodeToString([]byte(v))
-	}
-	for k, v := range secretsBase64 {
-		if _, ok := secretsMap[k]; ok {
-			return fmt.Errorf("Error: secret var %q is already set in Secrets\n", k)
-		}
-		if v == "" {
-			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
-		}
-		// Don't base64 encode these secrets, they already are.
-		secretsMap[k] = v
+		secretsAndData[k] = v
 	}
 
 	mapping := map[string]map[string]interface{}{
 		kubeTemplate:   data,
-		secretTemplate: secretsMap,
+		secretTemplate: secretsAndData,
 	}
 
 	outPaths := make(map[string]string)
