@@ -177,7 +177,7 @@ func wrapMain() error {
 
 func run(c *cli.Context) error {
 	vargs := GKE{}
-	vargs.DryRun = c.Bool("token")
+	vargs.DryRun = c.Bool("dry-run")
 	vargs.Verbose = c.Bool("verbose")
 	vargs.Token = c.String("token")
 	vargs.GCloudCmd = c.String("gcloud-cmd")
