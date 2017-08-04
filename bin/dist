@@ -6,7 +6,7 @@ REV=$(git rev-parse --short HEAD)
 
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "-X main.rev=$REV"
 
-OWNER=nytimes
+OWNER=${OWNER-nytimes}
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$BRANCH" = "master" ]; then
     BRANCH="latest"
