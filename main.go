@@ -354,6 +354,12 @@ func run(c *cli.Context) error {
 		return nil
 	}
 
+	// Print kubectl version.
+	err = runner.Run(kubectlCmd, "version")
+	if err != nil {
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
 	// Set the execution namespace.
 	if len(c.String("namespace")) > 0 {
 		fmt.Printf("Configuring kubectl to the %s namespace\n", c.String("namespace"))
