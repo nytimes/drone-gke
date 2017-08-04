@@ -33,10 +33,24 @@ The plugin infers the GCP project from the JSON credentials (`token`) and retrie
 
 ### Setting the JSON token
 
-TODO(tonglil):
-Can this token be "string-ified" and pasted in the GUI?
-Or must it be uploaded via CLI?
-We should document this.
+Improved in Drone 0.5+, it is no longer necessary to align the JSON file.
+
+#### GUI
+
+Simply copy the contents of the JSON credentials file and paste it in the input field (for example for a secret named `GOOGLE_CREDENTIALS`).
+
+##### CLI
+
+```
+drone secret add \
+--event push \
+--event pull_request \
+--event tag \
+--event deployment \
+--repository nytm/dv-cachet \
+--name GOOGLE_CREDENTIALS \
+--value @gcp-project-name-key-id.json
+```
 
 ## Secrets
 
