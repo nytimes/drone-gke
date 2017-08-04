@@ -54,9 +54,11 @@ drone secret add \
 
 ## Secrets
 
+TODO(tonglil): verify the secret prefix...
+
 `drone-gke` also supports creating Kubernetes secrets for you. These secrets should be passed with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template`.
 
-Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
+Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `base64_` t and the plugin will not re-encode them.
 
 ## Examples
 
@@ -99,13 +101,14 @@ pipeline:
       image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
       app: my-app
       env: dev
+    # TODO(tonglil): verify the secret prefix...
     secrets:
       - source: GOOGLE_CREDENTIALS
         target: token
       - source: API_TOKEN
         target: api_token
       - source: P12_CERT
-        target: p12_cert
+        target: base64_p12_cert
     when:
       event: push
       branch: master
