@@ -2,6 +2,8 @@ FROM alpine:3.4
 
 RUN apk add --no-cache curl python
 
+# kubectl 1.7.0
+#ENV GOOGLE_CLOUD_SDK_VERSION=163.0.0
 ENV GOOGLE_CLOUD_SDK_VERSION=161.0.0
 
 # Install the gcloud SDK
