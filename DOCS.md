@@ -82,7 +82,7 @@ pipeline:
   gcr:
     storage_driver: overlay
     repo: my-gke-project/my-app
-    tag: $DRONE_COMMIT
+    tag: ${DRONE_COMMIT}
     secrets:
       - source: GOOGLE_CREDENTIALS
         target: token
@@ -94,9 +94,9 @@ pipeline:
     image: nytimes/drone-gke
     zone: us-central1-a
     cluster: my-k8s-cluster
-    namespace: $DRONE_BRANCH
+    namespace: ${DRONE_BRANCH}
     vars:
-      image: gcr.io/my-gke-project/my-app:$DRONE_COMMIT
+      image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
       app: my-app
       env: dev
     secrets:
