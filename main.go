@@ -138,33 +138,6 @@ func wrapMain() error {
 }
 
 func run(c *cli.Context) error {
-	varsJson := c.String("vars")
-	vars := make(map[string]interface{})
-	if varsJson != "" {
-		if err := json.Unmarshal([]byte(varsJson), &vars); err != nil {
-			panic(err)
-		}
-	}
-
-	secrets := make(map[string]string)
-	for _, e := range os.Environ() {
-		pair := strings.Split(e, "=")
-		k := pair[0]
-		v := pair[1]
-		if _, ok := secrets[k]; ok {
-			return fmt.Errorf("Error: secret and base64 secret name conflict %q\n", k)
-		} else if v == "" {
-			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
-		}
-		if strings.HasPrefix(k, "SECRET_BASE64_") {
-			secrets[k] = v
-			os.Unsetenv(k)
-		} else if strings.HasPrefix(k, "SECRET_") {
-			secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
-			os.Unsetenv(k)
- 		}
- 	}
-
 	// Check required params.
 
 	// Trim whitespace, to forgive the vagaries of YAML parsing.
@@ -206,6 +179,51 @@ func run(c *cli.Context) error {
 		secretTemplate = ".kube.sec.yml"
 	}
 
+	// Parse variables.
+	vars := make(map[string]interface{})
+	varsJson := c.String("vars")
+	if varsJson != "" {
+		if err := json.Unmarshal([]byte(varsJson), &vars); err != nil {
+			return fmt.Errorf("Error parsing vars: %s\n", err)
+		}
+	}
+
+	// Parse secrets.
+	secrets := make(map[string]string)
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "SECRET_") {
+			continue
+		}
+
+		// Only split up to 2 parts
+		pair := strings.SplitN(e, "=", 2)
+
+		// Check that key and value both exist
+		if len(pair) != 2 {
+			return fmt.Errorf("Error: secret key and value mismatch, expected 2, got %d", len(pair))
+		}
+
+		k := pair[0]
+		v := pair[1]
+
+		if _, ok := secrets[k]; ok {
+			return fmt.Errorf("Error: secret var %q shadows existing secret\n", k)
+		}
+
+		if v == "" {
+			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
+		}
+
+		if strings.HasPrefix(k, "SECRET_BASE64_") {
+			secrets[k] = v
+		} else {
+			// Base64 encode secret strings for Kubernetes.
+			secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
+		}
+
+		os.Unsetenv(k)
+	}
+
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(token), 0600)
@@ -222,12 +240,15 @@ func run(c *cli.Context) error {
 		}
 	}()
 
-	e := os.Environ()
-	e = append(e, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
+	// Set up the execution environment.
 	wd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Error while getting working directory: %s\n", err)
+		return fmt.Errorf("Error getting working directory: %s\n", err)
 	}
+
+	e := os.Environ()
+	e = append(e, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
+
 	runner := NewEnviron(wd, e, os.Stdout, os.Stderr)
 
 	err = runner.Run(gcloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
@@ -254,7 +275,7 @@ func run(c *cli.Context) error {
 		// "system":    system,
 
 		// Misc useful stuff.
-		// note that secrets like gcp token are excluded
+		// Note that secrets (including the GCP token) are excluded
 		"project":   project,
 		"zone":      c.String("zone"),
 		"cluster":   c.String("cluster"),
@@ -262,6 +283,7 @@ func run(c *cli.Context) error {
 	}
 
 	secretsAndData := map[string]interface{}{}
+
 	for k, v := range vars {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
@@ -277,17 +299,16 @@ func run(c *cli.Context) error {
 		dump := data
 		delete(dump, "workspace")
 		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
+		dumpData(os.Stdout, "DATA + SECRETS", secrets)
 	}
 
 	for k, v := range secrets {
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
 		if _, ok := secretsAndData[k]; ok {
 			return fmt.Errorf("Error: secret var %q shadows existing var\n", k)
 		}
-		if v == "" {
-			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
-		}
 
-		// Base64 encode secret strings.
 		secretsAndData[k] = v
 	}
 
