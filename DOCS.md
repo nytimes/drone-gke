@@ -54,15 +54,15 @@ drone secret add \
 
 ## Secrets
 
-TODO(tonglil): verify the secret prefix...
+`drone-gke` also supports creating Kubernetes secrets for you. These secrets should be passed from Drone secrets to the plugin as environment variables with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template` in their environment variable form (uppercased).
 
-`drone-gke` also supports creating Kubernetes secrets for you. These secrets should be passed with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template`.
+Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
 
-Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `base64_` t and the plugin will not re-encode them.
+## Example reference usage
 
-## Examples
+### `.drone.yml`
 
-`.drone.yml`, particularly the `gke:` build step:
+Note particularly the `gke:` build step.
 
 ```yml
 ---
@@ -101,20 +101,21 @@ pipeline:
       image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
       app: my-app
       env: dev
-    # TODO(tonglil): verify the secret prefix...
     secrets:
       - source: GOOGLE_CREDENTIALS
         target: token
       - source: API_TOKEN
-        target: api_token
+        target: secret_api_token
       - source: P12_CERT
-        target: base64_p12_cert
+        target: secret_base64_p12_cert
     when:
       event: push
       branch: master
 ```
 
-Example `.kube.yml`, notice the two Kubernetes yml resource manifests separated by `---`:
+### `.kube.yml`
+
+Note the two Kubernetes yml resource manifests separated by `---`.
 
 ```yml
 ---
@@ -143,7 +144,7 @@ spec:
             - name: API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: {{.app}}-{{.env}}
                   key: api-token
 ---
 kind: Service
@@ -163,18 +164,20 @@ spec:
       protocol: TCP
 ```
 
-`.kube.sec.yml`, templated output will not be dumped when debugging:
+### `.kube.sec.yml`
+
+Note that the templated output will not be dumped when debugging.
 
 ```yml
 kind: Secret
 apiVersion: v1
 
 metadata:
-  name: secrets
+  name: {{.app}}-{{.env}}
 
 type: Opaque
 
 data:
-  api-token: {{.api_token}}
-  p12-cert: {{.p12_cert}}
+  api-token: {{.SECRET_API_TOKEN}}
+  p12-cert: {{.SECRET_BASE64_P12_CERT}}
 ```
