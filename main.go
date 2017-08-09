@@ -290,13 +290,7 @@ func run(c *cli.Context) error {
 		secretsAndData[k] = v
 	}
 
-	if c.Bool("verbose") {
-		dump := data
-		delete(dump, "workspace")
-		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
-		dumpData(os.Stdout, "DATA + SECRETS", secrets)
-	}
-
+	// Add secrets to data used for rendering the Secret template.
 	for k, v := range secrets {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
@@ -307,6 +301,11 @@ func run(c *cli.Context) error {
 		secretsAndData[k] = v
 	}
 
+	if c.Bool("verbose") {
+		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR TEMPLATES", data)
+	}
+
+	// mapping is a map of the template filename to the data it uses for rendering.
 	mapping := map[string]map[string]interface{}{
 		kubeTemplate:   data,
 		secretTemplate: secretsAndData,
@@ -328,10 +327,17 @@ func run(c *cli.Context) error {
 		if os.IsNotExist(err) {
 			if t == kubeTemplate {
 				return fmt.Errorf("Error finding template: %s\n", err)
-			} else {
-				fmt.Printf("Warning: skipping optional template %s, it was not found\n", t)
-				continue
 			}
+
+			fmt.Printf("Warning: skipping optional template %s, it was not found\n", t)
+			continue
+		}
+
+		// Create the output file.
+		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
+		f, err := os.Create(outPaths[t])
+		if err != nil {
+			return fmt.Errorf("Error creating deployment file: %s\n", err)
 		}
 
 		// Read the template.
@@ -346,15 +352,10 @@ func run(c *cli.Context) error {
 			return fmt.Errorf("Error parsing template: %s\n", err)
 		}
 
-		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
-		f, err := os.Create(outPaths[t])
-		if err != nil {
-			return fmt.Errorf("Error creating deployment file: %s\n", err)
-		}
-
+		// Generate the manifest.
 		err = tmpl.Execute(f, content)
 		if err != nil {
-			return fmt.Errorf("Error executing deployment template: %s\n", err)
+			return fmt.Errorf("Error rendering deployment manifest from template: %s\n", err)
 		}
 
 		f.Close()
@@ -364,12 +365,7 @@ func run(c *cli.Context) error {
 	}
 
 	if c.Bool("verbose") {
-		dumpFile(os.Stdout, "DEPLOYMENT (Secret Template Omitted)", outPaths[kubeTemplate])
-	}
-
-	if c.Bool("dry-run") {
-		fmt.Println("Skipping kubectl apply, because dry_run: true")
-		return nil
+		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", outPaths[kubeTemplate])
 	}
 
 	// Print kubectl version.
