@@ -12,7 +12,8 @@ The following parameters are used to configure this plugin:
 * *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
 * *optional* `template` - Kubernetes manifest template (defaults to `.kube.yml`)
 * *optional* `secret_template` - Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template (defaults to `.kube.sec.yml`)
-* `vars` - variables to use in `template`
+* `vars` - variables to use in `template` and `secret_template`
+* `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
 
 ### Debugging parameters
 
@@ -37,19 +38,19 @@ Improved in Drone 0.5+, it is no longer necessary to align the JSON file.
 
 #### GUI
 
-Simply copy the contents of the JSON credentials file and paste it in the input field (for example for a secret named `GOOGLE_CREDENTIALS`).
+Simply copy the contents of the JSON credentials file and paste it directly in the input field (for example for a secret named `GOOGLE_CREDENTIALS`).
 
 ##### CLI
 
 ```
 drone secret add \
---event push \
---event pull_request \
---event tag \
---event deployment \
---repository nytm/dv-cachet \
---name GOOGLE_CREDENTIALS \
---value @gcp-project-name-key-id.json
+  --event push \
+  --event pull_request \
+  --event tag \
+  --event deployment \
+  --repository org/repo \
+  --name GOOGLE_CREDENTIALS \
+  --value @gcp-project-name-key-id.json
 ```
 
 ## Secrets
