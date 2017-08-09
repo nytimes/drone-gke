@@ -374,9 +374,8 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	// Set the execution namespace.
 	if len(c.String("namespace")) > 0 {
-		fmt.Printf("Configuring kubectl to the %s namespace\n", c.String("namespace"))
+		fmt.Printf("\nConfiguring kubectl to the '%s' namespace\n", c.String("namespace"))
 
 		// Set the execution namespace.
 		context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
@@ -386,25 +385,26 @@ func run(c *cli.Context) error {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 
-		resource := fmt.Sprintf(nsTemplate, c.String("namespace"))
+		// Write the namespace manifest to a tmp file for application.
 		nsPath := "/tmp/namespace.json"
+		resource := fmt.Sprintf(nsTemplate, c.String("namespace"))
 
-		// Write namespace resource file to tmp file to be picked up by the 'kubectl' command.
-		// This is inside the ephemeral plugin container, not on the host.
 		err := ioutil.WriteFile(nsPath, []byte(resource), 0600)
 		if err != nil {
 			return fmt.Errorf("Error writing namespace resource file: %s\n", err)
 		}
 
 		// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
-		err = runner.Run(kubectlCmd, "apply", "--filename", nsPath)
+		nsArgs := applyArgs(c.Bool("dry-run"), nsPath)
+		err = runner.Run(kubectlCmd, nsArgs...)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 	}
 
-	// Apply Kubernetes configuration files.
-	err = runner.Run(kubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
+	// Apply Kubernetes manifests.
+	args := applyArgs(c.Bool("dry-run"), strings.Join(pathArg, ","))
+	err = runner.Run(kubectlCmd, args...)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
@@ -423,4 +423,20 @@ func getProjectFromToken(j string) string {
 		return ""
 	}
 	return t.ProjectID
+}
+
+func applyArgs(dryrun bool, file string) []string {
+	args := []string{
+		"apply",
+		"--record",
+	}
+
+	if dryrun {
+		args = append(args, "--dry-run")
+	}
+
+	args = append(args, "--filename")
+	args = append(args, file)
+
+	return args
 }
