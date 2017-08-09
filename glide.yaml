@@ -3,3 +3,5 @@ import:
 - package: github.com/drone/drone-plugin-go
   subpackages:
   - plugin
+- package: github.com/urfave/cli
+  version: ^1.19.1
