@@ -8,7 +8,7 @@ import (
 )
 
 func dumpData(w io.Writer, caption string, data interface{}) {
-	fmt.Fprintf(w, "---START %s---\n", caption)
+	fmt.Fprintf(w, "\n---START %s---\n", caption)
 	defer fmt.Fprintf(w, "---END %s---\n", caption)
 
 	b, err := json.MarshalIndent(data, "", "\t")
@@ -22,7 +22,7 @@ func dumpData(w io.Writer, caption string, data interface{}) {
 }
 
 func dumpFile(w io.Writer, caption, path string) {
-	fmt.Fprintf(w, "---START %s---\n", caption)
+	fmt.Fprintf(w, "\n---START %s---\n", caption)
 	defer fmt.Fprintf(w, "---END %s---\n", caption)
 
 	data, err := ioutil.ReadFile(path)
