@@ -268,13 +268,6 @@ func run(c *cli.Context) error {
 		"BRANCH":       c.String("drone-branch"),
 		"TAG":          c.String("drone-tag"),
 
-		// https://godoc.org/github.com/drone/drone-plugin-go/plugin#Workspace
-		// TODO do we really need these?
-		// "workspace": workspace,
-		// "repo":      repo,
-		// "build":     build,
-		// "system":    system,
-
 		// Misc useful stuff.
 		// Note that secrets (including the GCP token) are excluded
 		"project":   project,
