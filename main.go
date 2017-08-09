@@ -234,12 +234,12 @@ func run(c *cli.Context) error {
 
 	// Warn if the keyfile can't be deleted, but don't abort.
 	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
-	defer func() {
+	defer func(keyPath string) {
 		err := os.Remove(keyPath)
 		if err != nil {
 			fmt.Printf("Warning: error removing token file: %s\n", err)
 		}
-	}()
+	}(keyPath)
 
 	// Set up the execution environment.
 	wd, err := os.Getwd()
