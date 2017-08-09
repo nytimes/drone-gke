@@ -182,9 +182,9 @@ func run(c *cli.Context) error {
 
 	// Parse variables.
 	vars := make(map[string]interface{})
-	varsJson := c.String("vars")
-	if varsJson != "" {
-		if err := json.Unmarshal([]byte(varsJson), &vars); err != nil {
+	varsJSON := c.String("vars")
+	if varsJSON != "" {
+		if err := json.Unmarshal([]byte(varsJSON), &vars); err != nil {
 			return fmt.Errorf("Error parsing vars: %s\n", err)
 		}
 	}
