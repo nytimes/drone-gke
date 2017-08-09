@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	// Build revision is set at compile time.
 	rev string
 )
 
@@ -158,7 +159,7 @@ func run(c *cli.Context) error {
 	sdkPath := "/google-cloud-sdk"
 	keyPath := "/tmp/gcloud.json"
 
-	// Defaults.
+	// Set defaults.
 	gcloudCmd := c.String("gcloud-cmd")
 	if gcloudCmd == "" {
 		gcloudCmd = fmt.Sprintf("%s/bin/gcloud", sdkPath)
@@ -195,10 +196,10 @@ func run(c *cli.Context) error {
 			continue
 		}
 
-		// Only split up to 2 parts
+		// Only split up to 2 parts.
 		pair := strings.SplitN(e, "=", 2)
 
-		// Check that key and value both exist
+		// Check that key and value both exist.
 		if len(pair) != 2 {
 			return fmt.Errorf("Error: secret key and value mismatch, expected 2, got %d", len(pair))
 		}
@@ -284,6 +285,7 @@ func run(c *cli.Context) error {
 
 	secretsAndData := map[string]interface{}{}
 
+	// Add variables to data used for rendering both templates.
 	for k, v := range vars {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
@@ -339,12 +341,13 @@ func run(c *cli.Context) error {
 			}
 		}
 
-		// Generate the file.
+		// Read the template.
 		blob, err := ioutil.ReadFile(inPath)
 		if err != nil {
 			return fmt.Errorf("Error reading template: %s\n", err)
 		}
 
+		// Parse the template.
 		tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
 		if err != nil {
 			return fmt.Errorf("Error parsing template: %s\n", err)
@@ -363,6 +366,7 @@ func run(c *cli.Context) error {
 
 		f.Close()
 
+		// Add the manifest filepath to the list of manifests to apply.
 		pathArg = append(pathArg, outPaths[t])
 	}
 
@@ -385,6 +389,7 @@ func run(c *cli.Context) error {
 	if len(c.String("namespace")) > 0 {
 		fmt.Printf("Configuring kubectl to the %s namespace\n", c.String("namespace"))
 
+		// Set the execution namespace.
 		context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
 
 		err = runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", c.String("namespace"))
