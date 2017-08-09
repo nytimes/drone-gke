@@ -48,12 +48,12 @@ func wrapMain() error {
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:   "dry-run",
-			Usage:  "do not apply the Kubernetes templates",
+			Usage:  "do not apply the Kubernetes manifests to the API server",
 			EnvVar: "PLUGIN_DRY_RUN",
 		},
 		cli.BoolFlag{
 			Name:   "verbose",
-			Usage:  "dry run disables docker push",
+			Usage:  "dump available vars and the generated Kubernetes manifest, keeping secrets hidden",
 			EnvVar: "PLUGIN_VERBOSE",
 		},
 		cli.StringFlag{
@@ -73,7 +73,7 @@ func wrapMain() error {
 		},
 		cli.StringFlag{
 			Name:   "project",
-			Usage:  "gcp project",
+			Usage:  "GCP project name",
 			EnvVar: "PLUGIN_PROJECT",
 		},
 		cli.StringFlag{
@@ -89,43 +89,43 @@ func wrapMain() error {
 		cli.StringFlag{
 			Name:   "namespace",
 			Usage:  "Kubernetes namespace to operate in",
-			EnvVar: "PLUGIN_NAMEPSACE",
+			EnvVar: "PLUGIN_NAMESPACE",
 		},
 		cli.StringFlag{
 			Name:   "kube-template",
-			Usage:  "optional - template for e.g. deployments",
+			Usage:  "optional - template for Kubernetes resources, e.g. deployments",
 			EnvVar: "PLUGIN_TEMPLATE",
 			Value:  ".kube.yml",
 		},
 		cli.StringFlag{
 			Name:   "secret-template",
-			Usage:  "optional - template for the secret object",
+			Usage:  "optional - template for Kubernetes Secret resources",
 			EnvVar: "PLUGIN_SECRET_TEMPLATE",
 			Value:  ".kube.sec.yml",
 		},
 		cli.StringFlag{
 			Name:   "vars",
-			Usage:  "variables to use in template",
+			Usage:  "variables to use while templating manifests",
 			EnvVar: "PLUGIN_VARS",
 		},
 		cli.StringFlag{
 			Name:   "drone-build-number",
-			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			Usage:  "Drone build number",
 			EnvVar: "DRONE_BUILD_NUMBER",
 		},
 		cli.StringFlag{
 			Name:   "drone-commit",
-			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			Usage:  "Git commit hash",
 			EnvVar: "DRONE_COMMIT",
 		},
 		cli.StringFlag{
 			Name:   "drone-branch",
-			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			Usage:  "Git branch",
 			EnvVar: "DRONE_BRANCH",
 		},
 		cli.StringFlag{
 			Name:   "drone-tag",
-			Usage:  "variables to use in secret_template. These should already be base64 encoded; the plugin will not do so.",
+			Usage:  "Git tag",
 			EnvVar: "DRONE_TAG",
 		},
 	}
