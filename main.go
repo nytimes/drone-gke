@@ -405,8 +405,24 @@ func run(c *cli.Context) error {
 		}
 	}
 
-	// Apply Kubernetes manifests.
-	args := applyArgs(c.Bool("dry-run"), strings.Join(pathArg, ","))
+	manifests := strings.Join(pathArg, ",")
+
+	// If it is not a dry run, do a dry run first to validate Kubernetes manifests.
+	log("Validating Kubernetes manifests with a dry-run\n")
+
+	if !c.Bool("dry-run") {
+		args := applyArgs(true, manifests)
+		err = runner.Run(kubectlCmd, args...)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+
+		log("Applying Kubernetes manifests to the cluster\n")
+	}
+
+	// Actually apply Kubernetes manifests.
+
+	args := applyArgs(c.Bool("dry-run"), manifests)
 	err = runner.Run(kubectlCmd, args...)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
