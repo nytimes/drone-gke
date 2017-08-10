@@ -97,7 +97,7 @@ pipeline:
   gke:
     image: nytimes/drone-gke
     zone: us-central1-a
-    cluster: my-k8s-cluster
+    cluster: my-gke-cluster
     namespace: ${DRONE_BRANCH}
     vars:
       image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
@@ -121,8 +121,8 @@ Note the two Kubernetes yml resource manifests separated by `---`.
 
 ```yml
 ---
-kind: Deployment
 apiVersion: extensions/v1beta1
+kind: Deployment
 
 metadata:
   name: {{.app}}-{{.env}}
@@ -149,8 +149,8 @@ spec:
                   name: {{.app}}-{{.env}}
                   key: api-token
 ---
-kind: Service
 apiVersion: v1
+kind: Service
 
 metadata:
   name: {{.app}}-{{.env}}
@@ -171,8 +171,8 @@ spec:
 Note that the templated output will not be dumped when debugging.
 
 ```yml
-kind: Secret
 apiVersion: v1
+kind: Secret
 
 metadata:
   name: {{.app}}-{{.env}}
