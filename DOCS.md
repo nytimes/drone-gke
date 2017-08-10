@@ -4,7 +4,7 @@ You will need to generate a service account and use it's [JSON credential file](
 
 ## Overview
 
-The project is inferred from the JSON credentials.
+The project is inferred from the JSON credentials (`token`).
 
 The following parameters are used to configure this plugin:
 
@@ -16,13 +16,21 @@ The following parameters are used to configure this plugin:
 * *optional* `template` - Kubernetes template (like the [deployment object](http://kubernetes.io/docs/user-guide/deployments/)) (defaults to `.kube.yml`)
 * *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/) (defaults to `.kube.sec.yml`)
 * `vars` - variables to use in `template`
-* `secrets` - variables to use in `secret_template`. These are base64 encoded by the plugin.
-* `secrets_base64` - variables to use in `secret_template`. These should already be base64 encoded; the plugin will not do so.
 
-Optional (useful for debugging):
+### Optional
+
+These optional parameters are useful for debugging:
 
 * `dry_run` - do not apply the Kubernetes templates (defaults to `false`)
 * `verbose` - dump available `vars` and the generated Kubernetes `template` (excluding secrets) (defaults to `false`)
+
+## Secrets
+
+`drone-gke` requires a google service account key in json format to run, and this must be passed to the plugin under the target `token`.
+
+`drone-gke` also supports creating kubernetes secrets for you. These secrets should be passed with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template`.
+
+Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
 
 ## Templates
 
@@ -53,8 +61,10 @@ publish:
     storage_driver: overlay
     repo: my-gke-project/my-app
     tag: "$$COMMIT"
-    token: >
-      $$GOOGLE_CREDENTIALS
+
+    secrets:
+    - source: GOOGLE_CREDENTIALS
+      target: token
 
     when:
       event: push
@@ -67,8 +77,6 @@ deploy:
     zone: us-central1-a
     cluster: my-k8s-cluster
     namespace: $$BRANCH
-    token: >
-      $$GOOGLE_CREDENTIALS
 
     vars:
       image: gcr.io/my-gke-project/my-app:$$COMMIT
@@ -78,6 +86,15 @@ deploy:
       api_token: $$API_TOKEN
     secrets_base64:
       p12_cert: $$P12_CERT
+    
+
+    secrets:
+    - source: GOOGLE_CREDENTIALS
+      target: token
+    - source: API_TOKEN
+      target: secret_api_token
+    - source: P12_CERT
+      target: p12_cert
 
     when:
       event: push
