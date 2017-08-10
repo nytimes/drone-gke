@@ -374,20 +374,21 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	if len(c.String("namespace")) > 0 {
-		fmt.Printf("\nConfiguring kubectl to the '%s' namespace\n", c.String("namespace"))
+	namespace := c.String("namespace")
 
+	if len(namespace) > 0 {
 		// Set the execution namespace.
-		context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
+		log("Configuring kubectl to the %s namespace\n", namespace)
 
-		err = runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", c.String("namespace"))
+		context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
+		err = runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", namespace)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 
 		// Write the namespace manifest to a tmp file for application.
 		nsPath := "/tmp/namespace.json"
-		resource := fmt.Sprintf(nsTemplate, c.String("namespace"))
+		resource := fmt.Sprintf(nsTemplate, namespace)
 
 		err := ioutil.WriteFile(nsPath, []byte(resource), 0600)
 		if err != nil {
