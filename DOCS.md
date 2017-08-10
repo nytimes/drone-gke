@@ -161,9 +161,10 @@ spec:
     app: {{.app}}
     env: {{.env}}
   ports:
-    - port: 80
-      targetPort: 8000
+    - name: http
       protocol: TCP
+      port: 80
+      targetPort: 8000
 ```
 
 ### `.kube.sec.yml`
@@ -171,6 +172,7 @@ spec:
 Note that the templated output will not be dumped when debugging.
 
 ```yml
+---
 apiVersion: v1
 kind: Secret
 
