@@ -21,6 +21,8 @@ var (
 const (
 	gcloudCmd  = "gcloud"
 	kubectlCmd = "kubectl"
+
+	keyPath = "/tmp/gcloud.json"
 )
 
 var nsTemplate = `
@@ -155,8 +157,6 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: zone")
 	}
 
-	keyPath := "/tmp/gcloud.json"
-
 	// Enforce default values.
 	kubeTemplate := c.String("kube-template")
 	if kubeTemplate == "" {
@@ -222,12 +222,12 @@ func run(c *cli.Context) error {
 
 	// Warn if the keyfile can't be deleted, but don't abort.
 	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
-	defer func(keyPath string) {
+	defer func() {
 		err := os.Remove(keyPath)
 		if err != nil {
 			log("Warning: error removing token file: %s\n", err)
 		}
-	}(keyPath)
+	}()
 
 	// Set up the execution environment.
 	wd, err := os.Getwd()
