@@ -18,6 +18,11 @@ var (
 	rev string
 )
 
+const (
+	gcloudCmd  = "gcloud"
+	kubectlCmd = "kubectl"
+)
+
 var nsTemplate = `
 ---
 apiVersion: v1
@@ -61,16 +66,6 @@ func wrapMain() error {
 			Name:   "token",
 			Usage:  "service account's JSON credentials",
 			EnvVar: "TOKEN",
-		},
-		cli.StringFlag{
-			Name:   "gcloud-cmd",
-			Usage:  "alternative gcloud cmd",
-			EnvVar: "PLUGIN_GCLOUD_CMD",
-		},
-		cli.StringFlag{
-			Name:   "kubectl-cmd",
-			Usage:  "alternative kubectl cmd",
-			EnvVar: "PLUGIN_KUBECTL_CMD",
 		},
 		cli.StringFlag{
 			Name:   "project",
@@ -160,20 +155,9 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: zone")
 	}
 
-	sdkPath := "/google-cloud-sdk"
 	keyPath := "/tmp/gcloud.json"
 
-	// Set defaults.
-	gcloudCmd := c.String("gcloud-cmd")
-	if gcloudCmd == "" {
-		gcloudCmd = fmt.Sprintf("%s/bin/gcloud", sdkPath)
-	}
-
-	kubectlCmd := c.String("kubectl-cmd")
-	if kubectlCmd == "" {
-		kubectlCmd = fmt.Sprintf("%s/bin/kubectl", sdkPath)
-	}
-
+	// Enforce default values.
 	kubeTemplate := c.String("kube-template")
 	if kubeTemplate == "" {
 		kubeTemplate = ".kube.yml"
