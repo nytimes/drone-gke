@@ -23,6 +23,7 @@ const (
 	kubectlCmd = "kubectl"
 
 	keyPath = "/tmp/gcloud.json"
+	nsPath  = "/tmp/namespace.json"
 )
 
 var nsTemplate = `
@@ -375,7 +376,6 @@ func run(c *cli.Context) error {
 		}
 
 		// Write the namespace manifest to a tmp file for application.
-		nsPath := "/tmp/namespace.json"
 		resource := fmt.Sprintf(nsTemplate, namespace)
 
 		err := ioutil.WriteFile(nsPath, []byte(resource), 0600)
