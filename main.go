@@ -237,7 +237,7 @@ func run(c *cli.Context) error {
 	defer func(keyPath string) {
 		err := os.Remove(keyPath)
 		if err != nil {
-			fmt.Printf("Warning: error removing token file: %s\n", err)
+			log("Warning: error removing token file: %s\n", err)
 		}
 	}(keyPath)
 
@@ -329,7 +329,7 @@ func run(c *cli.Context) error {
 				return fmt.Errorf("Error finding template: %s\n", err)
 			}
 
-			fmt.Printf("Warning: skipping optional template %s, it was not found\n", t)
+			log("Warning: skipping optional template %s because it was not found\n", t)
 			continue
 		}
 
@@ -395,6 +395,8 @@ func run(c *cli.Context) error {
 		}
 
 		// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
+		log("Ensuring the %s namespace exists\n", namespace)
+
 		nsArgs := applyArgs(c.Bool("dry-run"), nsPath)
 		err = runner.Run(kubectlCmd, nsArgs...)
 		if err != nil {
@@ -439,4 +441,9 @@ func applyArgs(dryrun bool, file string) []string {
 	args = append(args, file)
 
 	return args
+}
+
+func log(format string, a ...interface{}) (int, error) {
+	fmt.Println()
+	return fmt.Printf(format, a...)
 }
