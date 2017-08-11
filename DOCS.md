@@ -7,6 +7,7 @@ Use this plugin to deploy Docker images to [Google Container Engine (GKE)][gke].
 The following parameters are used to configure this plugin:
 
 * `image` - this plugin's Docker image
+* *optional* `project` - project of the container cluster (defaults to inferring from the service account `token` credential)
 * `zone` - zone of the container cluster
 * `cluster` - name of the container cluster
 * *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
