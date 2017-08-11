@@ -41,7 +41,7 @@ Improved in Drone 0.5+, it is no longer necessary to align the JSON file.
 
 Simply copy the contents of the JSON credentials file and paste it directly in the input field (for example for a secret named `GOOGLE_CREDENTIALS`).
 
-##### CLI
+#### CLI
 
 ```
 drone secret add \
