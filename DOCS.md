@@ -25,7 +25,7 @@ These optional parameters are useful for debugging:
 
 ## Credentials
 
-`drone-gke` requires a Google service account and use it's [JSON credential file][service-account] to authenticate.
+`drone-gke` requires a Google service account and uses it's [JSON credential file][service-account] to authenticate.
 
 This must be passed to the plugin under the target `token`.
 
