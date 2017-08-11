@@ -147,9 +147,13 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: token")
 	}
 
-	project := getProjectFromToken(token)
+	// Use project if explicitly stated, otherwise infer from the service account token.
+	project := c.String("project")
 	if project == "" {
-		return fmt.Errorf("Missing required param: project")
+		project = getProjectFromToken(token)
+		if project == "" {
+			return fmt.Errorf("Missing required param: project")
+		}
 	}
 
 	if c.String("zone") == "" {
