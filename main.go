@@ -90,16 +90,16 @@ func wrapMain() error {
 			EnvVar: "PLUGIN_NAMESPACE",
 		},
 		cli.StringFlag{
-			Name:   "kube-template",
-			Usage:  "optional - template for Kubernetes resources, e.g. deployments",
-			EnvVar: "PLUGIN_TEMPLATE",
-			Value:  ".kube.yml",
+			Name:   "input-dir",
+			Usage:  "optional - input directory with templates for Kubernetes resources",
+			EnvVar: "PLUGIN_INPUT_DIR",
+			Value:  ".kube",
 		},
 		cli.StringFlag{
-			Name:   "secret-template",
-			Usage:  "optional - template for Kubernetes Secret resources",
-			EnvVar: "PLUGIN_SECRET_TEMPLATE",
-			Value:  ".kube.sec.yml",
+			Name:   "output-dir",
+			Usage:  "optional - output directory for rendered manifests for Kubernetes resources",
+			EnvVar: "PLUGIN_OUTPUT_DIR",
+			Value:  ".kube-out",
 		},
 		cli.StringFlag{
 			Name:   "vars",
@@ -158,14 +158,9 @@ func run(c *cli.Context) error {
 	}
 
 	// Enforce default values.
-	kubeTemplate := c.String("kube-template")
+	kubeTemplate := c.String("input-dir")
 	if kubeTemplate == "" {
-		kubeTemplate = ".kube.yml"
-	}
-
-	secretTemplate := c.String("secret-template")
-	if secretTemplate == "" {
-		secretTemplate = ".kube.sec.yml"
+		kubeTemplate = ".kube"
 	}
 
 	// Parse variables.
