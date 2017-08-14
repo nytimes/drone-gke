@@ -157,12 +157,6 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: zone")
 	}
 
-	// Enforce default values.
-	kubeTemplate := c.String("input-dir")
-	if kubeTemplate == "" {
-		kubeTemplate = ".kube"
-	}
-
 	// Parse variables.
 	vars := make(map[string]interface{})
 	varsJSON := c.String("vars")
