@@ -1,15 +1,16 @@
 #!/bin/bash
 set -euo pipefail
-cd $(cd `dirname "$0"`; cd ..; pwd)
+cd "$(cd "$(dirname "$0")"; cd ..; pwd)"
 
 REV=$(git rev-parse --short HEAD)
 
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "-X main.rev=$REV"
 
-OWNER=${OWNER-nytimes}
+OWNER=${OWNER:-nytimes}
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-if [ "$BRANCH" = "master" ]; then
-    BRANCH="latest"
+
+if [[ "$BRANCH" == "master" ]]; then
+  BRANCH="latest"
 fi
 
 docker build -t "$OWNER/drone-gke:$BRANCH" .
