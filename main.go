@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -231,15 +230,10 @@ func run(c *cli.Context) error {
 	}()
 
 	// Set up the execution environment.
-	wd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("Error getting working directory: %s\n", err)
-	}
-
 	e := os.Environ()
 	e = append(e, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
 
-	runner := NewEnviron(wd, e, os.Stdout, os.Stderr)
+	runner := NewEnviron("", e, os.Stdout, os.Stderr)
 
 	err = runner.Run(gcloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
@@ -308,11 +302,8 @@ func run(c *cli.Context) error {
 			continue
 		}
 
-		inPath := filepath.Join(wd, t)
-		bn := filepath.Base(inPath)
-
 		// Ensure the required template file exists.
-		_, err := os.Stat(inPath)
+		_, err := os.Stat(t)
 		if os.IsNotExist(err) {
 			if t == kubeTemplate {
 				return fmt.Errorf("Error finding template: %s\n", err)
@@ -323,20 +314,20 @@ func run(c *cli.Context) error {
 		}
 
 		// Create the output file.
-		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
+		outPaths[t] = fmt.Sprintf("/tmp/%s", t)
 		f, err := os.Create(outPaths[t])
 		if err != nil {
 			return fmt.Errorf("Error creating deployment file: %s\n", err)
 		}
 
 		// Read the template.
-		blob, err := ioutil.ReadFile(inPath)
+		blob, err := ioutil.ReadFile(t)
 		if err != nil {
 			return fmt.Errorf("Error reading template: %s\n", err)
 		}
 
 		// Parse the template.
-		tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
+		tmpl, err := template.New(t).Option("missingkey=error").Parse(string(blob))
 		if err != nil {
 			return fmt.Errorf("Error parsing template: %s\n", err)
 		}
