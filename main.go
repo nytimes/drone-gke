@@ -439,7 +439,6 @@ func applyArgs(dryrun bool, file string) []string {
 	return args
 }
 
-func log(format string, a ...interface{}) (int, error) {
-	fmt.Println()
-	return fmt.Printf(format, a...)
+func log(format string, a ...interface{}) {
+	fmt.Printf("\n"+format, a...)
 }
