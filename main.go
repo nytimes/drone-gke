@@ -356,7 +356,7 @@ func run(c *cli.Context) error {
 
 	namespace := c.String("namespace")
 
-	if len(namespace) > 0 {
+	if namespace != "" {
 		// Set the execution namespace.
 		log("Configuring kubectl to the %s namespace\n", namespace)
 
