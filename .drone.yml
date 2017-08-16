@@ -19,15 +19,29 @@ pipeline:
       - go vet
       - go test -cover -coverprofile=coverage.out
 
-  build_latest:
+  build:
     <<: *config
     when:
-      branch: master
+      branch:
+        - develop
+        - master
 
   build_release:
     <<: *config
     when:
       event: tag
+
+  publish_develop:
+    image: plugins/docker
+    repo: nytimes/drone-gke
+    tag:
+      - "develop"
+    secrets:
+      - docker_username
+      - docker_password
+    when:
+      event: push
+      branch: develop
 
   publish_latest:
     image: plugins/docker
@@ -35,7 +49,7 @@ pipeline:
     tag:
       - "latest"
       - "0.7"
-      - "${DRONE_COMMIT}"
+      #- "${DRONE_COMMIT}"
     secrets:
       - docker_username
       - docker_password
