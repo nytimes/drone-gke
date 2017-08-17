@@ -94,13 +94,13 @@ func wrapMain() error {
 			Name:   "input-dir",
 			Usage:  "optional - input directory with templates for Kubernetes resources",
 			EnvVar: "PLUGIN_INPUT_DIR",
-			Value:  ".kube",
+			Value:  ".kube/",
 		},
 		cli.StringFlag{
 			Name:   "output-dir",
 			Usage:  "optional - output directory for rendered manifests for Kubernetes resources",
 			EnvVar: "PLUGIN_OUTPUT_DIR",
-			Value:  ".kube-out",
+			Value:  ".kube-out/",
 		},
 		cli.StringFlag{
 			Name:   "vars",
