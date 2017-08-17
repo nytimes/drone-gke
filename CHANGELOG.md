@@ -29,3 +29,5 @@ To reference other environment variables, pass them via `vars`.
 ## 0.4 (Deprecated)
 
 Stable and works with Drone 0.4.
+
+To continue using this version, update references in `.drone.yml` to pin the plugin to `images: nytimes/drone-gke:0.4`.
