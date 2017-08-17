@@ -60,7 +60,6 @@ pipeline:
     image: plugins/docker
     repo: nytimes/drone-gke
     tag:
-      - "latest"
       - "${DRONE_TAG}"
     secrets:
       - docker_username
