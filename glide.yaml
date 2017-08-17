@@ -1,8 +1,5 @@
 package: github.com/nytimes/drone-gke
 import:
-- package: github.com/drone/drone-plugin-go
-  subpackages:
-  - plugin
 - package: github.com/urfave/cli
   version: ^1.19.1
 - package: github.com/stretchr/testify
