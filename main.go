@@ -265,7 +265,7 @@ func run(c *cli.Context) error {
 		secretsAndData[k] = v
 	}
 
-	// Add secrets to data used for rendering the secret templates.
+	// Add secrets to data used for rendering the secret (.sec) templates.
 	for k, v := range secrets {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
@@ -375,7 +375,7 @@ func run(c *cli.Context) error {
 
 			f.Close()
 		default:
-			log("Warning: skipping rendering %s because it is not a .sec.yml or .yml file\n", filename)
+			log("Warning: skipped rendering %s because it is not a .sec.yml or .yml file\n", filename)
 		}
 	}
 
@@ -391,10 +391,8 @@ func run(c *cli.Context) error {
 
 			switch {
 			case strings.HasSuffix(filename, ".sec.yml"):
-				// Don't dump.
-				log("Not dumping %s\n", outName)
+				log("Skipped dumping %s because it contains secrets\n", outName)
 			case strings.HasSuffix(filename, ".yml"):
-				// Otherwise dump.
 				dumpFile(os.Stdout, fmt.Sprintf("RENDERED MANIFEST (%s)", outName), outName)
 			default:
 			}
