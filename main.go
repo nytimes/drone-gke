@@ -260,6 +260,7 @@ func run(c *cli.Context) error {
 	}
 
 	secretsAndData := map[string]interface{}{}
+	secretsAndDataKeys := map[string]string{}
 
 	// Add variables to data used for rendering both templates.
 	for k, v := range vars {
@@ -282,10 +283,12 @@ func run(c *cli.Context) error {
 		}
 
 		secretsAndData[k] = v
+		secretsAndDataKeys[k] = "VALUE REDACTED"
 	}
 
 	if c.Bool("verbose") {
-		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR TEMPLATES", data)
+		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", data)
+		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsAndDataKeys)
 	}
 
 	// mapping is a map of the template filename to the data it uses for rendering.
