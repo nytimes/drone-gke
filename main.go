@@ -304,7 +304,7 @@ func run(c *cli.Context) error {
 	// Loop over all files in input directory.
 	files, err := ioutil.ReadDir(inputDir)
 	if err != nil {
-		return fmt.Errorf("Error reading templates form input directory: %s\n", err)
+		return fmt.Errorf("Error reading templates from input directory: %s\n", err)
 	}
 
 	for _, f := range files {
