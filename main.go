@@ -314,69 +314,48 @@ func run(c *cli.Context) error {
 		}
 
 		filename := f.Name()
-		inName := filepath.Join(inputDir, filename)
-		outName := filepath.Join(outputDir, filename)
+		templateData := map[string]interface{}{}
 
 		switch {
 		case strings.HasSuffix(filename, ".sec.yml"):
-			// Render with `secretsAndData`
-
-			// Create the output file.
-			f, err := os.Create(outName)
-			if err != nil {
-				return fmt.Errorf("Error creating output file: %s\n", err)
-			}
-
-			// Read the template.
-			blob, err := ioutil.ReadFile(inName)
-			if err != nil {
-				return fmt.Errorf("Error reading template: %s\n", err)
-			}
-
-			// Parse the template.
-			tmpl, err := template.New(outName).Option("missingkey=error").Parse(string(blob))
-			if err != nil {
-				return fmt.Errorf("Error parsing template: %s\n", err)
-			}
-
-			// Generate the manifest.
-			err = tmpl.Execute(f, secretsAndData)
-			if err != nil {
-				return fmt.Errorf("Error rendering manifest from template: %s\n", err)
-			}
-
-			f.Close()
+			// Generate the manifest with `secretsAndData`.
+			templateData := secretsAndData
 		case strings.HasSuffix(filename, ".yml"):
-			// Otherwise render with `data`
-
-			// Create the output file.
-			f, err := os.Create(outName)
-			if err != nil {
-				return fmt.Errorf("Error creating output file: %s\n", err)
-			}
-
-			// Read the template.
-			blob, err := ioutil.ReadFile(inName)
-			if err != nil {
-				return fmt.Errorf("Error reading template: %s\n", err)
-			}
-
-			// Parse the template.
-			tmpl, err := template.New(outName).Option("missingkey=error").Parse(string(blob))
-			if err != nil {
-				return fmt.Errorf("Error parsing template: %s\n", err)
-			}
-
-			// Generate the manifest.
-			err = tmpl.Execute(f, data)
-			if err != nil {
-				return fmt.Errorf("Error rendering manifest from template: %s\n", err)
-			}
-
-			f.Close()
+			// Generate the manifest with `data`.
+			templateData := data
 		default:
 			log("Warning: skipped rendering %s because it is not a .sec.yml or .yml file\n", filename)
+			continue
 		}
+
+		inName := filepath.Join(inputDir, filename)
+		outName := filepath.Join(outputDir, filename)
+
+		// Read the template.
+		blob, err := ioutil.ReadFile(inName)
+		if err != nil {
+			return fmt.Errorf("Error reading template: %s\n", err)
+		}
+
+		// Parse the template.
+		tmpl, err := template.New(outName).Option("missingkey=error").Parse(string(blob))
+		if err != nil {
+			return fmt.Errorf("Error parsing template: %s\n", err)
+		}
+
+		// Create the output file.
+		f, err := os.Create(outName)
+		if err != nil {
+			return fmt.Errorf("Error creating output file: %s\n", err)
+		}
+
+		// Generate the output file.
+		err = tmpl.Execute(f, templateData)
+		if err != nil {
+			return fmt.Errorf("Error rendering manifest from template: %s\n", err)
+		}
+
+		f.Close()
 	}
 
 	if c.Bool("verbose") {
@@ -394,7 +373,6 @@ func run(c *cli.Context) error {
 				log("Skipped dumping %s because it contains secrets\n", outName)
 			case strings.HasSuffix(filename, ".yml"):
 				dumpFile(os.Stdout, fmt.Sprintf("RENDERED MANIFEST (%s)", outName), outName)
-			default:
 			}
 		}
 	}
