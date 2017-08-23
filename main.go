@@ -319,10 +319,10 @@ func run(c *cli.Context) error {
 		switch {
 		case strings.HasSuffix(filename, ".sec.yml"):
 			// Generate the manifest with `secretsAndData`.
-			templateData := secretsAndData
+			templateData = secretsAndData
 		case strings.HasSuffix(filename, ".yml"):
 			// Generate the manifest with `data`.
-			templateData := data
+			templateData = data
 		default:
 			log("Warning: skipped rendering %s because it is not a .sec.yml or .yml file\n", filename)
 			continue
