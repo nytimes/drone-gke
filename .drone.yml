@@ -48,7 +48,7 @@ pipeline:
     repo: nytimes/drone-gke
     tag:
       - "latest"
-      - "0.4"
+      - "0.7"
     secrets:
       - docker_username
       - docker_password
