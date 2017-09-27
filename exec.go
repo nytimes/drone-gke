@@ -12,6 +12,7 @@ type Environ struct {
 	env    []string
 	stdout io.Writer
 	stderr io.Writer
+	output []byte
 }
 
 func NewEnviron(dir string, env []string, stdout, stderr io.Writer) *Environ {
@@ -28,7 +29,7 @@ func (e *Environ) Run(name string, arg ...string) error {
 	cmd := exec.Command(name, arg...)
 	cmd.Dir = e.dir
 	cmd.Env = e.env
-	cmd.Stdout = e.stdout
+	//cmd.Stdout = &e.stdout
 	cmd.Stderr = e.stderr
 
 	// TODO: Extract this
@@ -36,5 +37,12 @@ func (e *Environ) Run(name string, arg ...string) error {
 	fmt.Println("$", strings.Join(cmd.Args, " "))
 	//--
 
-	return cmd.Run()
+	b, err := cmd.Output()
+	e.output = b
+	e.stdout.Write(b)
+	return err
+}
+
+func (e *Environ) Output() []byte {
+	return e.output
 }

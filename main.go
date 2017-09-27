@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -14,19 +15,20 @@ import (
 )
 
 type GKE struct {
-	DryRun         bool                   `json:"dry_run"`
-	Verbose        bool                   `json:"verbose"`
-	Token          string                 `json:"token"`
-	GCloudCmd      string                 `json:"gcloud_cmd"`
-	KubectlCmd     string                 `json:"kubectl_cmd"`
-	Project        string                 `json:"project"`
-	Zone           string                 `json:"zone"`
-	Cluster        string                 `json:"cluster"`
-	Namespace      string                 `json:"namespace"`
-	Template       string                 `json:"template"`
-	SecretTemplate string                 `json:"secret_template"`
-	Vars           map[string]interface{} `json:"vars"`
-	Secrets        map[string]string      `json:"secrets"`
+	DryRun            bool                   `json:"dry_run"`
+	Verbose           bool                   `json:"verbose"`
+	Token             string                 `json:"token"`
+	GCloudCmd         string                 `json:"gcloud_cmd"`
+	KubectlCmd        string                 `json:"kubectl_cmd"`
+	Project           string                 `json:"project"`
+	Zone              string                 `json:"zone"`
+	Cluster           string                 `json:"cluster"`
+	Namespace         string                 `json:"namespace"`
+	Template          string                 `json:"template"`
+	SecretTemplate    string                 `json:"secret_template"`
+	EndpointsTemplate string                 `json:"endpoints_template"`
+	Vars              map[string]interface{} `json:"vars"`
+	Secrets           map[string]string      `json:"secrets"`
 
 	// SecretsBase64 holds secret values which are already base64 encoded and
 	// thus don't need to be re-encoded as they would be if they were in
@@ -37,6 +39,8 @@ type GKE struct {
 var (
 	rev string
 )
+
+var endpointsResponse *regexp.Regexp = regexp.MustCompile(`Service Configuration \[([^]]+)] uploaded for service \[([^]]+)]`)
 
 var nsTemplate = `
 ---
@@ -166,6 +170,18 @@ func wrapMain() error {
 		"zone":      vargs.Zone,
 		"cluster":   vargs.Cluster,
 		"namespace": vargs.Namespace,
+	}
+
+	if !vargs.DryRun && vargs.EndpointsTemplate != "" {
+		err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "services", "deploy", vargs.EndpointsTemplate, "--force")
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+		match := endpointsResponse.FindSubmatch(runner.Output())
+		if len(match) > 0 {
+			data["endpoints_service_version"] = string(match[1])
+			data["endpoints_service_name"] = string(match[2])
+		}
 	}
 
 	for k, v := range vargs.Vars {
