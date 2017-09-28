@@ -1,0 +1,68 @@
+---
+workspace:
+  base: /go
+  path: src/github.com/NYTimes/drone-gke
+
+build_config: &config
+  image: golang:1.8
+  environment:
+    - CGO_ENABLED=0
+  commands:
+    - go build -a -ldflags "-X main.rev=${DRONE_COMMIT}"
+
+pipeline:
+  test:
+    image: golang:1.8
+    environment:
+      - CGO_ENABLED=0
+    commands:
+      - go vet
+      - go test -cover -coverprofile=coverage.out
+
+  build:
+    <<: *config
+    when:
+      branch:
+        - develop
+        - master
+
+  build_release:
+    <<: *config
+    when:
+      event: tag
+
+  publish_develop:
+    image: plugins/docker
+    repo: nytimes/drone-gke
+    tag:
+      - "develop"
+    secrets:
+      - docker_username
+      - docker_password
+    when:
+      event: push
+      branch: develop
+
+  publish_latest:
+    image: plugins/docker
+    repo: nytimes/drone-gke
+    tag:
+      - "latest"
+      - "0.7"
+    secrets:
+      - docker_username
+      - docker_password
+    when:
+      event: push
+      branch: master
+
+  publish_release:
+    image: plugins/docker
+    repo: nytimes/drone-gke
+    tag:
+      - "${DRONE_TAG}"
+    secrets:
+      - docker_username
+      - docker_password
+    when:
+      event: tag
