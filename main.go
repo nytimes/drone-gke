@@ -12,23 +12,25 @@ import (
 	"text/template"
 
 	"github.com/drone/drone-plugin-go/plugin"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type GKE struct {
-	DryRun            bool                   `json:"dry_run"`
-	Verbose           bool                   `json:"verbose"`
-	Token             string                 `json:"token"`
-	GCloudCmd         string                 `json:"gcloud_cmd"`
-	KubectlCmd        string                 `json:"kubectl_cmd"`
-	Project           string                 `json:"project"`
-	Zone              string                 `json:"zone"`
-	Cluster           string                 `json:"cluster"`
-	Namespace         string                 `json:"namespace"`
-	Template          string                 `json:"template"`
-	SecretTemplate    string                 `json:"secret_template"`
-	EndpointsTemplate string                 `json:"endpoints_template"`
-	Vars              map[string]interface{} `json:"vars"`
-	Secrets           map[string]string      `json:"secrets"`
+	DryRun           bool                   `json:"dry_run"`
+	Verbose          bool                   `json:"verbose"`
+	Token            string                 `json:"token"`
+	GCloudCmd        string                 `json:"gcloud_cmd"`
+	KubectlCmd       string                 `json:"kubectl_cmd"`
+	Project          string                 `json:"project"`
+	Zone             string                 `json:"zone"`
+	Cluster          string                 `json:"cluster"`
+	Namespace        string                 `json:"namespace"`
+	Template         string                 `json:"template"`
+	SecretTemplate   string                 `json:"secret_template"`
+	EndpointsService string                 `json:"endpoints_service"`
+	EndpointsSchema  string                 `json:"endpoints_template"`
+	Vars             map[string]interface{} `json:"vars"`
+	Secrets          map[string]string      `json:"secrets"`
 
 	// SecretsBase64 holds secret values which are already base64 encoded and
 	// thus don't need to be re-encoded as they would be if they were in
@@ -172,15 +174,54 @@ func wrapMain() error {
 		"namespace": vargs.Namespace,
 	}
 
-	if !vargs.DryRun && vargs.EndpointsTemplate != "" {
-		err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "services", "deploy", vargs.EndpointsTemplate, "--force")
+	if !vargs.DryRun && vargs.EndpointsSchema != "" {
+		// get latest deployed version. Newest first
+		err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "config", "list", "--service=", vargs.EndpointsService, "--format", "'value(id)'", "--limit", "1")
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
-		match := endpointsResponse.FindSubmatch(runner.Output())
-		if len(match) > 0 {
-			data["endpoints_service_version"] = string(match[1])
-			data["endpoints_service_name"] = string(match[2])
+		serviceVersion := runner.Output()
+
+		// get deployed version of swagger file
+		err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "config", "describe", string(serviceVersion), "--service=", vargs.EndpointsService, "--format", "'value(apis.version)'")
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+		swaggerVersion := runner.Output()
+
+		// read version from schema
+		f, err := os.Open(vargs.EndpointsSchema)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+		var version struct {
+			Info struct {
+				Version string `json:"version"`
+			} `json:"info"`
+		}
+		fi, err := f.Stat()
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+		err = yaml.NewYAMLOrJSONDecoder(f, int(fi.Size())).Decode(&version)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+		f.Close()
+		data["endpoints_service_name"] = vargs.EndpointsService
+
+		if string(swaggerVersion) != version.Info.Version {
+			// deploy new schema
+			err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "services", "deploy", vargs.EndpointsSchema, "--force")
+			if err != nil {
+				return fmt.Errorf("Error: %s\n", err)
+			}
+			match := endpointsResponse.FindSubmatch(runner.Output())
+			if len(match) > 0 {
+				data["endpoints_service_version"] = string(match[1])
+			}
+		} else {
+			data["endpoints_service_version"] = serviceVersion
 		}
 	}
 
