@@ -181,36 +181,41 @@ func wrapMain() error {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 		serviceVersion := runner.Output()
-
-		// get deployed version of swagger file
-		err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "config", "describe", string(serviceVersion), "--service=", vargs.EndpointsService, "--format", "'value(apis.version)'")
-		if err != nil {
-			return fmt.Errorf("Error: %s\n", err)
-		}
-		swaggerVersion := runner.Output()
-
-		// read version from schema
-		f, err := os.Open(vargs.EndpointsSchema)
-		if err != nil {
-			return fmt.Errorf("Error: %s\n", err)
-		}
+		swaggerVersion := []byte{}
 		var version struct {
 			Info struct {
 				Version string `json:"version"`
 			} `json:"info"`
 		}
-		fi, err := f.Stat()
-		if err != nil {
-			return fmt.Errorf("Error: %s\n", err)
+
+		// schema has been deployed previously
+		if len(serviceVersion) != 0 {
+			// get deployed version of swagger file
+			err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "config", "describe", string(serviceVersion), "--service=", vargs.EndpointsService, "--format", "'value(apis.version)'")
+			if err != nil {
+				return fmt.Errorf("Error: %s\n", err)
+			}
+			swaggerVersion = runner.Output()
+
+			// read version from schema
+			f, err := os.Open(vargs.EndpointsSchema)
+			if err != nil {
+				return fmt.Errorf("Error: %s\n", err)
+			}
+
+			fi, err := f.Stat()
+			if err != nil {
+				return fmt.Errorf("Error: %s\n", err)
+			}
+			err = yaml.NewYAMLOrJSONDecoder(f, int(fi.Size())).Decode(&version)
+			if err != nil {
+				return fmt.Errorf("Error: %s\n", err)
+			}
+			f.Close()
 		}
-		err = yaml.NewYAMLOrJSONDecoder(f, int(fi.Size())).Decode(&version)
-		if err != nil {
-			return fmt.Errorf("Error: %s\n", err)
-		}
-		f.Close()
 		data["endpoints_service_name"] = vargs.EndpointsService
 
-		if string(swaggerVersion) != version.Info.Version {
+		if len(serviceVersion) == 0 || string(swaggerVersion) != version.Info.Version {
 			// deploy new schema
 			err = runner.Run(vargs.GCloudCmd, "gcloud", "alpha", "endpoints", "services", "deploy", vargs.EndpointsSchema, "--force")
 			if err != nil {
