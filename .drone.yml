@@ -77,12 +77,11 @@ pipeline:
         - develop
         - master
 
-  slack_events:
+  slack_tag:
     image: plugins/slack
     channel: dv-notifications
     secrets:
       - slack_webhook
     when:
       event:
-        - pull_request
         - tag
