@@ -66,3 +66,23 @@ pipeline:
       - docker_password
     when:
       event: tag
+
+  slack:
+    image: plugins/slack
+    channel: dv-notifications
+    secrets:
+      - slack_webhook
+    when:
+      branch:
+        - develop
+        - master
+
+  slack_events:
+    image: plugins/slack
+    channel: dv-notifications
+    secrets:
+      - slack_webhook
+    when:
+      event:
+        - pull_request
+        - tag
