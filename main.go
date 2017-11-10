@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/urfave/cli"
+	"strconv"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 const (
 	gcloudCmd  = "gcloud"
 	kubectlCmd = "kubectl"
+	timeoutCmd = "timeout"
 
 	keyPath = "/tmp/gcloud.json"
 	nsPath  = "/tmp/namespace.json"
@@ -128,8 +130,14 @@ func wrapMain() error {
 		},
 		cli.StringSliceFlag{
 			Name:   "rollout_check",
-			Usage:  "List of deployments to check after apply",
+			Usage:  "List of deployments to check after apply (optional)",
 			EnvVar: "PLUGIN_ROLLOUT_CHECK",
+		},
+		cli.IntFlag{
+			Name:   "rollout_timeout",
+			Usage:  "If rollout_check is set, maximum number of seconds for rollout (optional)",
+			EnvVar: "PLUGIN_ROLLOUT_TIMEOUT",
+			Value:  0,
 		},
 	}
 
@@ -415,15 +423,30 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	var rolloutCheck []string = c.StringSlice("rollout_check")
+	rolloutCheck := c.StringSlice("rollout_check")
+	rolloutTimeout := c.Int("rollout_timeout")
 
-	log(fmt.Sprintf("Running rollout check for %v\n", rollout, rolloutCheck))
+	log(fmt.Sprintf("Running rollout check for %v\n", rolloutCheck))
 
 	for _, deployment := range rolloutCheck {
-		if (namespace != "") {
-			err = runner.Run(kubectlCmd, "rollout", "status", "deploy", deployment, "--namespace", namespace)
+		command := []string{
+			"-t",
+			strconv.Itoa(rolloutTimeout),
+			kubectlCmd,
+			"rollout",
+			"status",
+			"deploy",
+			deployment,
+		}
+
+		if namespace != "" {
+			command = append(command, "--namespace", namespace)
+		}
+
+		if rolloutTimeout == 0 {
+			err = runner.Run(kubectlCmd, command[3:]...)
 		} else {
-			err = runner.Run(kubectlCmd, "rollout", "status", "deploy", deployment)
+			err = runner.Run(timeoutCmd, command...)
 		}
 
 		if err != nil {
@@ -464,5 +487,5 @@ func applyArgs(dryrun bool, file string) []string {
 }
 
 func log(format string, a ...interface{}) {
-	fmt.Printf("\n"+format, a...)
+	fmt.Printf("\n" + format, a...)
 }
