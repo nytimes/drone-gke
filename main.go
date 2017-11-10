@@ -126,6 +126,11 @@ func wrapMain() error {
 			Usage:  "Git tag",
 			EnvVar: "DRONE_TAG",
 		},
+		cli.StringSliceFlag{
+			Name:   "rollout_check",
+			Usage:  "List of deployments to check after apply",
+			EnvVar: "PLUGIN_ROLLOUT_CHECK",
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -408,6 +413,22 @@ func run(c *cli.Context) error {
 	err = runner.Run(kubectlCmd, args...)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	var rolloutCheck []string = c.StringSlice("rollout_check")
+
+	log(fmt.Sprintf("Running rollout check for %v\n", rollout, rolloutCheck))
+
+	for _, deployment := range rolloutCheck {
+		if (namespace != "") {
+			err = runner.Run(kubectlCmd, "rollout", "status", "deploy", deployment, "--namespace", namespace)
+		} else {
+			err = runner.Run(kubectlCmd, "rollout", "status", "deploy", deployment)
+		}
+
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
 	}
 
 	return nil
