@@ -314,7 +314,7 @@ func wrapMain() error {
 			manifestBase := filepath.Base(manifestPath)
 			manifestDir := filepath.Dir(manifestPath)
 			manifestExt := filepath.Ext(manifestPath)
-			manifestBaseWithoutExt = strings.Replace(manifestBase, manifestExt, "", 1)
+			manifestBaseWithoutExt := strings.Replace(manifestBase, manifestExt, "", 1)
 			// output path would resemble "/tmp/.kube.istio.yml"
 			istioOutputPath := filepath.Join(manifestDir, fmt.Sprintf("%s.istio%s", manifestBaseWithoutExt, manifestExt))
 			err = runner.Run(vargs.IstioctlCmd, "kube-inject", "--istioNamespace", vargs.IstioNamespace, "--filename", manifestPath, "--output", istioOutputPath)
