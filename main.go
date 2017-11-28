@@ -16,13 +16,16 @@ import (
 type GKE struct {
 	DryRun         bool                   `json:"dry_run"`
 	Verbose        bool                   `json:"verbose"`
+	KubeInject     bool                   `json:"kube_inject"`
 	Token          string                 `json:"token"`
 	GCloudCmd      string                 `json:"gcloud_cmd"`
 	KubectlCmd     string                 `json:"kubectl_cmd"`
+	IstioctlCmd    string                 `json:"istioctl_cmd"`
 	Project        string                 `json:"project"`
 	Zone           string                 `json:"zone"`
 	Cluster        string                 `json:"cluster"`
 	Namespace      string                 `json:"namespace"`
+	IstioNamespace string                 `json:"istio_namespace"`
 	Template       string                 `json:"template"`
 	SecretTemplate string                 `json:"secret_template"`
 	Vars           map[string]interface{} `json:"vars"`
@@ -95,6 +98,7 @@ func wrapMain() error {
 
 	sdkPath := "/google-cloud-sdk"
 	keyPath := "/tmp/gcloud.json"
+	istioctlPath := "/istio"
 
 	// Defaults.
 
@@ -104,6 +108,14 @@ func wrapMain() error {
 
 	if vargs.KubectlCmd == "" {
 		vargs.KubectlCmd = fmt.Sprintf("%s/bin/kubectl", sdkPath)
+	}
+
+	if vargs.IstioctlCmd == "" {
+		vargs.IstioctlCmd = fmt.Sprintf("%s/bin/istioctl", istioctlPath)
+	}
+
+	if vargs.IstioNamespace == "" {
+		vargs.IstioNamespace = "istio-system"
 	}
 
 	if vargs.Template == "" {
@@ -211,6 +223,7 @@ func wrapMain() error {
 
 	outPaths := make(map[string]string)
 	pathArg := []string{}
+	istioInjectedPathArg := []string{}
 
 	for t, content := range mapping {
 		if t == "" {
@@ -293,6 +306,31 @@ func wrapMain() error {
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
+	}
+
+	if vargs.KubeInject {
+		// Inject istio sidecar proxy into pods
+		for _, manifestPath := range pathArg {
+			manifestBase := filepath.Base(manifestPath)
+			manifestDir := filepath.Dir(manifestPath)
+			manifestExt := filepath.Ext(manifestPath)
+			manifestBaseWithoutExt = strings.Replace(manifestBase, manifestExt, "", 1)
+			// output path would resemble "/tmp/.kube.istio.yml"
+			istioOutputPath := filepath.Join(manifestDir, fmt.Sprintf("%s.istio%s", manifestBaseWithoutExt, manifestExt))
+			err = runner.Run(vargs.IstioctlCmd, "kube-inject", "--istioNamespace", vargs.IstioNamespace, "--filename", manifestPath, "--output", istioOutputPath)
+			if err != nil {
+				return fmt.Errorf("Error: %s\n", err)
+			}
+			istioInjectedPathArg = append(istioInjectedPathArg, istioOutputPath)
+		}
+
+		// Apply kube-inject'ed Kubernetes configuration files.
+		err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(istioInjectedPathArg, ","))
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+
+		return nil
 	}
 
 	// Apply Kubernetes configuration files.
