@@ -19,6 +19,10 @@ The following parameters are used to configure this plugin:
 * `secrets` - variables to use in `secret_template`. These are base64 encoded by the plugin.
 * `secrets_base64` - variables to use in `secret_template`. These should already be base64 encoded; the plugin will not do so.
 
+[Istio](https://istio.io/) specific parameters:
+* `kube_inject` *optional*, _{bool}_ - if true, will run `istioctl kube-inject` on the generated kubernetes manifests (defaults to `false`)
+* `istio_namespace` *optional*, _{string}_ - Istio system namespace, passed as `--istioNamespace` to `istioctl` (defaults to `"istio-system"`)
+
 Optional (useful for debugging):
 
 * `dry_run` - do not apply the Kubernetes templates (defaults to `false`)
