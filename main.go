@@ -135,7 +135,7 @@ func wrapMain() error {
 		},
 		cli.IntFlag{
 			Name:   "wait_seconds",
-			Usage:  "If wait_deployments is set, maximum number of seconds for rollout (optional)",
+			Usage:  "If wait_deployments is set, maximum number of seconds for rollout (optional). The exceeded timeout сauses the build to fail.",
 			EnvVar: "PLUGIN_WAIT_SECONDS",
 			Value:  0,
 		},
