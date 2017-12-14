@@ -129,14 +129,14 @@ func wrapMain() error {
 			EnvVar: "DRONE_TAG",
 		},
 		cli.StringSliceFlag{
-			Name:   "rollout_check",
+			Name:   "wait_deployments",
 			Usage:  "List of deployments to check after apply (optional)",
-			EnvVar: "PLUGIN_ROLLOUT_CHECK",
+			EnvVar: "PLUGIN_WAIT_DEPLOYMENTS",
 		},
 		cli.IntFlag{
-			Name:   "rollout_timeout",
-			Usage:  "If rollout_check is set, maximum number of seconds for rollout (optional)",
-			EnvVar: "PLUGIN_ROLLOUT_TIMEOUT",
+			Name:   "wait_seconds",
+			Usage:  "If wait_deployments is set, maximum number of seconds for rollout (optional)",
+			EnvVar: "PLUGIN_WAIT_SECONDS",
 			Value:  0,
 		},
 	}
@@ -423,32 +423,27 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	rolloutCheck := c.StringSlice("rollout_check")
-	rolloutTimeout := c.Int("rollout_timeout")
+	waitDeployments := c.StringSlice("wait_deployments")
+	waitSeconds := c.Int("wait_seconds")
+	waitDeploymentsCount := len(waitDeployments)
 
-	log(fmt.Sprintf("Running rollout check for %v\n", rolloutCheck))
+	for counter, deployment := range waitDeployments {
+		log(fmt.Sprintf("[%d/%d] Waiting till rollout completes for %s\n", counter + 1, waitDeploymentsCount, deployment))
 
-	for _, deployment := range rolloutCheck {
-		command := []string{
-			"-t",
-			strconv.Itoa(rolloutTimeout),
-			kubectlCmd,
-			"rollout",
-			"status",
-			"deploy",
-			deployment,
-		}
+		command := []string{"rollout", "status", "deployment", deployment}
 
 		if namespace != "" {
 			command = append(command, "--namespace", namespace)
 		}
 
-		if rolloutTimeout == 0 {
-			err = runner.Run(kubectlCmd, command[3:]...)
-		} else {
-			err = runner.Run(timeoutCmd, command...)
+		path := kubectlCmd
+
+		if waitSeconds != 0 {
+			command = append([]string{"-t", strconv.Itoa(waitSeconds), path}, command...)
+			path = timeoutCmd
 		}
 
+		err = runner.Run(path, command...)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
