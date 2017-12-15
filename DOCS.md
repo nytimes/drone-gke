@@ -13,6 +13,8 @@ The following parameters are used to configure this plugin:
 * *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
 * *optional* `template` - Kubernetes manifest template (defaults to `.kube.yml`)
 * *optional* `secret_template` - Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template (defaults to `.kube.sec.yml`)
+* *optional* `wait_deployments` - list of deployments to check after apply
+* *optional* `wait_seconds` - if `wait_deployments` is set, maximum number of seconds for rollout (the exceeded timeout сauses the build to fail)
 * `vars` - variables to use in `template` and `secret_template`
 * `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
 
