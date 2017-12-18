@@ -423,12 +423,19 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
+	// Waiting for rollout to finish
+
 	waitDeployments := c.StringSlice("wait_deployments")
 	waitSeconds := c.Int("wait_seconds")
 	waitDeploymentsCount := len(waitDeployments)
+	counterProgress := ""
 
 	for counter, deployment := range waitDeployments {
-		log(fmt.Sprintf("[%d/%d] Waiting till rollout completes for %s\n", counter + 1, waitDeploymentsCount, deployment))
+		if waitDeploymentsCount > 1 {
+			counterProgress = fmt.Sprintf("[%d/%d]", counter + 1, waitDeploymentsCount)
+		}
+
+		log(fmt.Sprintf("%sWaiting till rollout completes for %s\n", counterProgress, deployment))
 
 		command := []string{"rollout", "status", "deployment", deployment}
 
