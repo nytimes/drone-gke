@@ -12,6 +12,7 @@ RUN ./google-cloud-sdk/install.sh --quiet
 
 # Install kubectl
 RUN ./google-cloud-sdk/bin/gcloud components install kubectl
+RUN ./google-cloud-sdk/bin/gcloud components update --quiet
 
 ENV CLOUDSDK_CONTAINER_USE_APPLICATION_DEFAULT_CREDENTIALS=true
 
