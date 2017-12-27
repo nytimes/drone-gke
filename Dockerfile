@@ -14,7 +14,7 @@ RUN ./google-cloud-sdk/install.sh --quiet
 RUN ./google-cloud-sdk/bin/gcloud components install kubectl
 
 # Install istioctl
-ENV ISTIOCTL_VERSION=0.2.12
+ENV ISTIOCTL_VERSION=0.4.0
 RUN \
   curl -fsSLo istio.tar.gz https://github.com/istio/istio/releases/download/$ISTIOCTL_VERSION/istio-$ISTIOCTL_VERSION-linux.tar.gz \
   && tar -xzf istio.tar.gz \

@@ -22,6 +22,7 @@ The following parameters are used to configure this plugin:
 [Istio](https://istio.io/) specific parameters:
 * `kube_inject` *optional*, _{bool}_ - if true, will run `istioctl kube-inject` on the generated kubernetes manifests (defaults to `false`)
 * `istio_namespace` *optional*, _{string}_ - Istio system namespace, passed as `--istioNamespace` to `istioctl` (defaults to `"istio-system"`)
+* `include_ip_ranges` *optional*, _{string}_ - Comma separated list of IP ranges in CIDR form, passed as `--includeIPRanges` to `istioctl`
 
 Optional (useful for debugging):
 
