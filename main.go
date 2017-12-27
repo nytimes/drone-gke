@@ -130,12 +130,12 @@ func wrapMain() error {
 		},
 		cli.StringSliceFlag{
 			Name:   "wait_deployments",
-			Usage:  "List of deployments to check after apply (optional)",
+			Usage:  "List of Deployments to wait for successful rollout, using kubectl rollout status",
 			EnvVar: "PLUGIN_WAIT_DEPLOYMENTS",
 		},
 		cli.IntFlag{
 			Name:   "wait_seconds",
-			Usage:  "If wait_deployments is set, maximum number of seconds for rollout (optional). The exceeded timeout сauses the build to fail.",
+			Usage:  "If wait_deployments is set, number of seconds to wait before failing the build",
 			EnvVar: "PLUGIN_WAIT_SECONDS",
 			Value:  0,
 		},
@@ -432,10 +432,10 @@ func run(c *cli.Context) error {
 
 	for counter, deployment := range waitDeployments {
 		if waitDeploymentsCount > 1 {
-			counterProgress = fmt.Sprintf("[%d/%d]", counter + 1, waitDeploymentsCount)
+			counterProgress = fmt.Sprintf(" %d/%d", counter + 1, waitDeploymentsCount)
 		}
 
-		log(fmt.Sprintf("%sWaiting till rollout completes for %s\n", counterProgress, deployment))
+		log(fmt.Sprintf("Waiting until rollout completes for %s%s\n", deployment, counterProgress))
 
 		command := []string{"rollout", "status", "deployment", deployment}
 
