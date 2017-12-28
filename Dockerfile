@@ -11,7 +11,9 @@ RUN rm google-cloud-sdk.tar.gz
 RUN ./google-cloud-sdk/install.sh --quiet
 
 # Install kubectl
-RUN ./google-cloud-sdk/bin/gcloud components install kubectl
+RUN \
+  ./google-cloud-sdk/bin/gcloud components install kubectl \
+  && ln -s /google-cloud-sdk/bin/kubectl /usr/local/bin/kubectl
 
 # Install istioctl
 ENV ISTIOCTL_VERSION=0.4.0
