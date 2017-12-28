@@ -1,4 +1,4 @@
-FROM alpine:3.4
+FROM frolvlad/alpine-glibc
 
 RUN apk add --no-cache curl python
 
