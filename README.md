@@ -14,6 +14,16 @@ In addition, this opens the yaml file to templatization and customization with e
 go build
 ```
 
+## Releases
+
+Users should use the `x.X` releases for stable use cases.
+
+Breaking changes may occur between `x.X` releases, and will be documented in the changelog.
+
+- Pushes to the [`develop`](https://github.com/NYTimes/drone-gke/tree/develop) branch will update the Docker Hub release tagged `develop`.
+- Pushes to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will update the Docker Hub release tagged `latest` and `x.X`.
+- Tags to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will create the Docker Hub release with the tag value.
+
 ## Testing
 
 **This could use your contribution!**
