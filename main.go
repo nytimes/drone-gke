@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -90,16 +91,16 @@ func wrapMain() error {
 			EnvVar: "PLUGIN_NAMESPACE",
 		},
 		cli.StringFlag{
-			Name:   "kube-template",
-			Usage:  "optional - template for Kubernetes resources, e.g. deployments",
-			EnvVar: "PLUGIN_TEMPLATE",
-			Value:  ".kube.yml",
+			Name:   "input-dir",
+			Usage:  "optional - input directory with templates for Kubernetes resources",
+			EnvVar: "PLUGIN_INPUT_DIR",
+			Value:  ".kube/",
 		},
 		cli.StringFlag{
-			Name:   "secret-template",
-			Usage:  "optional - template for Kubernetes Secret resources",
-			EnvVar: "PLUGIN_SECRET_TEMPLATE",
-			Value:  ".kube.sec.yml",
+			Name:   "output-dir",
+			Usage:  "optional - output directory for rendered manifests for Kubernetes resources",
+			EnvVar: "PLUGIN_OUTPUT_DIR",
+			Value:  ".kube-out/",
 		},
 		cli.StringFlag{
 			Name:   "vars",
@@ -155,17 +156,6 @@ func run(c *cli.Context) error {
 
 	if c.String("zone") == "" {
 		return fmt.Errorf("Missing required param: zone")
-	}
-
-	// Enforce default values.
-	kubeTemplate := c.String("kube-template")
-	if kubeTemplate == "" {
-		kubeTemplate = ".kube.yml"
-	}
-
-	secretTemplate := c.String("secret-template")
-	if secretTemplate == "" {
-		secretTemplate = ".kube.sec.yml"
 	}
 
 	// Parse variables.
@@ -245,6 +235,7 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
+	// Set up the variables available to templates.
 	data := map[string]interface{}{
 		"BUILD_NUMBER": c.String("drone-build-number"),
 		"COMMIT":       c.String("drone-commit"),
@@ -262,7 +253,7 @@ func run(c *cli.Context) error {
 	secretsAndData := map[string]interface{}{}
 	secretsAndDataKeys := map[string]string{}
 
-	// Add variables to data used for rendering both templates.
+	// Add variables to data used for rendering all templates.
 	for k, v := range vars {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
@@ -274,7 +265,7 @@ func run(c *cli.Context) error {
 		secretsAndData[k] = v
 	}
 
-	// Add secrets to data used for rendering the Secret template.
+	// Add secrets to data used for rendering the secret (.sec) templates.
 	for k, v := range secrets {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
@@ -291,64 +282,99 @@ func run(c *cli.Context) error {
 		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsAndDataKeys)
 	}
 
-	// mapping is a map of the template filename to the data it uses for rendering.
-	mapping := map[string]map[string]interface{}{
-		kubeTemplate:   data,
-		secretTemplate: secretsAndData,
+	inputDir := c.String("input-dir")
+	outputDir := c.String("output-dir")
+
+	// Ensure output directory does not exist.
+	_, err = os.Stat(outputDir)
+	if err == nil {
+		return fmt.Errorf("Error: output directory %s already exists, will not pollute existing directory\n", outputDir)
 	}
 
-	outPaths := make(map[string]string)
-	pathArg := []string{}
-
-	for t, content := range mapping {
-		if t == "" {
-			continue
-		}
-
-		// Ensure the required template file exists.
-		_, err := os.Stat(t)
-		if os.IsNotExist(err) {
-			if t == kubeTemplate {
-				return fmt.Errorf("Error finding template: %s\n", err)
-			}
-
-			log("Warning: skipping optional template %s because it was not found\n", t)
-			continue
-		}
-
-		// Create the output file.
-		outPaths[t] = fmt.Sprintf("/tmp/%s", t)
-		f, err := os.Create(outPaths[t])
+	// Create the output directory.
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(outputDir, os.ModePerm)
 		if err != nil {
-			return fmt.Errorf("Error creating deployment file: %s\n", err)
+			return fmt.Errorf("Error: unable to create output directory %s for rendered manifests\n", outputDir)
 		}
+	} else {
+		return fmt.Errorf("Error creating output directory: %s\n", err)
+	}
+
+	// Loop over all files in input directory.
+	files, err := ioutil.ReadDir(inputDir)
+	if err != nil {
+		return fmt.Errorf("Error reading templates from input directory: %s\n", err)
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			// Skip sub-directories.
+			continue
+		}
+
+		filename := f.Name()
+		templateData := map[string]interface{}{}
+
+		switch {
+		case strings.HasSuffix(filename, ".sec.yml"):
+			// Generate the manifest with `secretsAndData`.
+			templateData = secretsAndData
+		case strings.HasSuffix(filename, ".yml"):
+			// Generate the manifest with `data`.
+			templateData = data
+		default:
+			log("Warning: skipped rendering %s because it is not a .sec.yml or .yml file\n", filename)
+			continue
+		}
+
+		inName := filepath.Join(inputDir, filename)
+		outName := filepath.Join(outputDir, filename)
 
 		// Read the template.
-		blob, err := ioutil.ReadFile(t)
+		blob, err := ioutil.ReadFile(inName)
 		if err != nil {
 			return fmt.Errorf("Error reading template: %s\n", err)
 		}
 
 		// Parse the template.
-		tmpl, err := template.New(t).Option("missingkey=error").Parse(string(blob))
+		tmpl, err := template.New(outName).Option("missingkey=error").Parse(string(blob))
 		if err != nil {
 			return fmt.Errorf("Error parsing template: %s\n", err)
 		}
 
-		// Generate the manifest.
-		err = tmpl.Execute(f, content)
+		// Create the output file.
+		f, err := os.Create(outName)
 		if err != nil {
-			return fmt.Errorf("Error rendering deployment manifest from template: %s\n", err)
+			return fmt.Errorf("Error creating output file: %s\n", err)
+		}
+
+		// Generate the output file.
+		err = tmpl.Execute(f, templateData)
+		if err != nil {
+			return fmt.Errorf("Error rendering manifest from template: %s\n", err)
 		}
 
 		f.Close()
-
-		// Add the manifest filepath to the list of manifests to apply.
-		pathArg = append(pathArg, outPaths[t])
 	}
 
 	if c.Bool("verbose") {
-		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", outPaths[kubeTemplate])
+		for _, f := range files {
+			if f.IsDir() {
+				// Skip sub-directories.
+				continue
+			}
+
+			filename := f.Name()
+			outName := filepath.Join(outputDir, filename)
+
+			switch {
+			case strings.HasSuffix(filename, ".sec.yml"):
+				log("Skipped dumping %s because it contains secrets\n", outName)
+			case strings.HasSuffix(filename, ".yml"):
+				dumpFile(os.Stdout, fmt.Sprintf("RENDERED MANIFEST (%s)", outName), outName)
+			}
+		}
 	}
 
 	// Print kubectl version.
@@ -387,13 +413,11 @@ func run(c *cli.Context) error {
 		}
 	}
 
-	manifests := strings.Join(pathArg, ",")
-
 	// If it is not a dry run, do a dry run first to validate Kubernetes manifests.
 	log("Validating Kubernetes manifests with a dry-run\n")
 
 	if !c.Bool("dry-run") {
-		args := applyArgs(true, manifests)
+		args := applyArgs(true, outputDir)
 		err = runner.Run(kubectlCmd, args...)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
@@ -404,7 +428,7 @@ func run(c *cli.Context) error {
 
 	// Actually apply Kubernetes manifests.
 
-	args := applyArgs(c.Bool("dry-run"), manifests)
+	args := applyArgs(c.Bool("dry-run"), outputDir)
 	err = runner.Run(kubectlCmd, args...)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)

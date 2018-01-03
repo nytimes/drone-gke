@@ -11,10 +11,10 @@ The following parameters are used to configure this plugin:
 * `zone` - zone of the container cluster
 * `cluster` - name of the container cluster
 * *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
-* *optional* `template` - Kubernetes manifest template (defaults to `.kube.yml`)
-* *optional* `secret_template` - Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template (defaults to `.kube.sec.yml`)
-* `vars` - variables to use in `template` and `secret_template`
-* `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
+* *optional* `input_dir` - directory with Kubernetes manifest templates (defaults to `.kube`)
+* *optional* `output_dir` - directory to output rendered Kubernetes manifests (defaults to `.kube-out`)
+* `vars` - variables to use in all `.yml` templates
+* `secrets` - credentials to use as variables in templates with the `.sec.yml` extension (see [below](#secrets) for details)
 
 ### Debugging parameters
 
@@ -56,9 +56,14 @@ drone secret add \
 
 ## Secrets
 
-`drone-gke` also supports creating Kubernetes secrets for you. These secrets should be passed from Drone secrets to the plugin as environment variables with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template` in their environment variable form (uppercased).
+`drone-gke` also supports creating Kubernetes secrets for you.
+These secrets:
+- Should be passed from Drone secrets to the plugin as environment variables with targets with the prefix `secret_`.
+- Will be used as variables in templates with the `.sec.yml` extension in their environment variable form (uppercased).
+- Will **not** be available in templates with only the `.yml` extension.
 
-Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
+Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you.
+If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
 
 ## Example reference usage
 
@@ -89,7 +94,8 @@ pipeline:
     username: _json_key
     registry: us.gcr.io
     repo: us.gcr.io/my-gke-project/my-app
-    tag: ${DRONE_COMMIT}
+    tag:
+      - ${DRONE_COMMIT}
     secrets:
       - source: GOOGLE_CREDENTIALS
         target: docker_password
@@ -118,9 +124,7 @@ pipeline:
       branch: master
 ```
 
-### `.kube.yml`
-
-Note the two Kubernetes yml resource manifests separated by `---`.
+### `.kube/deployment.yml`
 
 ```yml
 ---
@@ -151,6 +155,11 @@ spec:
                 secretKeyRef:
                   name: {{.app}}-{{.env}}
                   key: api-token
+```
+
+### `.kube/service.yml`
+
+```yml
 ---
 apiVersion: v1
 kind: Service
@@ -170,9 +179,9 @@ spec:
       targetPort: 8000
 ```
 
-### `.kube.sec.yml`
+### `.kube/secret.sec.yml`
 
-Note that the templated output will not be dumped when debugging.
+Note that the rendered manifest will not be dumped when debugging.
 
 ```yml
 ---
