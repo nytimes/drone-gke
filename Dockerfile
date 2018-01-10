@@ -1,7 +1,7 @@
-FROM google/cloud-sdk:latest
+FROM google/cloud-sdk:183.0.0-alpine
 
 # Install kubectl
-RUN apt-get install kubectl
+RUN gcloud components install kubectl -q
 
 # Add the Drone plugin
 ADD drone-gke /bin/
