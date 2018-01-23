@@ -260,10 +260,10 @@ func wrapMain() error {
 
 		f.Close()
 
-		if t == vargs.SecretTemplate {
-			pathArgSecret = append(pathArgSecret, outPaths[t])
-		} else {
+		if t == vargs.Template {
 			pathArg = append(pathArg, outPaths[t])
+		} else {
+			pathArgSecret = append(pathArgSecret, outPaths[t])
 		}
 	}
 
