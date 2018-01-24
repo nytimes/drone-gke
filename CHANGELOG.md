@@ -3,6 +3,12 @@
 Deprecated means no longer supported.
 Please update to the newest GA release.
 
+## 0.8.0
+
+### FEATURES & IMPROVEMENTS
+
+- Add functionality to wait for successful `Deployment` rollout using `kubectl rollout status`.
+
 ## 0.7.1
 
 ### FEATURES & IMPROVEMENTS
