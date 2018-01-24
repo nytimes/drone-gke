@@ -5,6 +5,8 @@ Please update to the newest GA release.
 
 ## 0.7.1
 
+**FEATURES & IMPROVEMENTS**
+
 - `kubectl` is updated to 1.8.4.
 
 ## 0.7.0
