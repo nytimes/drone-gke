@@ -18,6 +18,12 @@ spec:
           image: {{.image}}
           ports:
             - containerPort: 8080
+          env:
+            - name: ENV_VAR_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{.app}}-{{.env}}
+                  key: api-token
 ---
 apiVersion: v1
 kind: Service
