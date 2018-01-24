@@ -1,8 +1,5 @@
-# kubectl 1.6.6
-#FROM google/cloud-sdk:161.0.0-alpine
-
-# kubectl 1.7.0
-FROM google/cloud-sdk:181.0.0-alpine
+# kubectl 1.8.4
+FROM google/cloud-sdk:183.0.0-alpine
 
 # Install kubectl
 RUN gcloud components install kubectl

@@ -3,6 +3,10 @@
 Deprecated means no longer supported.
 Please update to the newest GA release.
 
+## 0.7.1
+
+- `kubectl` is updated to 1.8.4.
+
 ## 0.7.0
 
 The plugin is updated to Drone 0.5+ style (environment variables).
