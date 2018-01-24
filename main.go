@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/urfave/cli"
+	"strconv"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 const (
 	gcloudCmd  = "gcloud"
 	kubectlCmd = "kubectl"
+	timeoutCmd = "timeout"
 
 	keyPath = "/tmp/gcloud.json"
 	nsPath  = "/tmp/namespace.json"
@@ -125,6 +127,17 @@ func wrapMain() error {
 			Name:   "drone-tag",
 			Usage:  "Git tag",
 			EnvVar: "DRONE_TAG",
+		},
+		cli.StringSliceFlag{
+			Name:   "wait_deployments",
+			Usage:  "List of Deployments to wait for successful rollout, using kubectl rollout status",
+			EnvVar: "PLUGIN_WAIT_DEPLOYMENTS",
+		},
+		cli.IntFlag{
+			Name:   "wait_seconds",
+			Usage:  "If wait_deployments is set, number of seconds to wait before failing the build",
+			EnvVar: "PLUGIN_WAIT_SECONDS",
+			Value:  0,
 		},
 	}
 
@@ -410,6 +423,39 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
+	// Waiting for rollout to finish
+
+	waitDeployments := c.StringSlice("wait_deployments")
+	waitSeconds := c.Int("wait_seconds")
+	waitDeploymentsCount := len(waitDeployments)
+	counterProgress := ""
+
+	for counter, deployment := range waitDeployments {
+		if waitDeploymentsCount > 1 {
+			counterProgress = fmt.Sprintf(" %d/%d", counter + 1, waitDeploymentsCount)
+		}
+
+		log(fmt.Sprintf("Waiting until rollout completes for %s%s\n", deployment, counterProgress))
+
+		command := []string{"rollout", "status", "deployment", deployment}
+
+		if namespace != "" {
+			command = append(command, "--namespace", namespace)
+		}
+
+		path := kubectlCmd
+
+		if waitSeconds != 0 {
+			command = append([]string{"-t", strconv.Itoa(waitSeconds), path}, command...)
+			path = timeoutCmd
+		}
+
+		err = runner.Run(path, command...)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+	}
+
 	return nil
 }
 
@@ -443,5 +489,5 @@ func applyArgs(dryrun bool, file string) []string {
 }
 
 func log(format string, a ...interface{}) {
-	fmt.Printf("\n"+format, a...)
+	fmt.Printf("\n" + format, a...)
 }
