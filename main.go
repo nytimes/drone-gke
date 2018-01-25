@@ -1,16 +1,18 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/urfave/cli"
-	"strconv"
 )
 
 var (
@@ -243,10 +245,10 @@ func run(c *cli.Context) error {
 	}()
 
 	// Set up the execution environment.
-	e := os.Environ()
-	e = append(e, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
+	environ := os.Environ()
+	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
 
-	runner := NewEnviron("", e, os.Stdout, os.Stderr)
+	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
 
 	err = runner.Run(gcloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
@@ -311,7 +313,10 @@ func run(c *cli.Context) error {
 	}
 
 	outPaths := make(map[string]string)
+
+	// YAML files path for kubectl
 	pathArg := []string{}
+	pathArgSecret := []string{}
 
 	for t, content := range mapping {
 		if t == "" {
@@ -357,7 +362,11 @@ func run(c *cli.Context) error {
 		f.Close()
 
 		// Add the manifest filepath to the list of manifests to apply.
-		pathArg = append(pathArg, outPaths[t])
+		if t == kubeTemplate {
+			pathArg = append(pathArg, outPaths[t])
+		} else {
+			pathArgSecret = append(pathArgSecret, outPaths[t])
+		}
 	}
 
 	if c.Bool("verbose") {
@@ -401,6 +410,11 @@ func run(c *cli.Context) error {
 	}
 
 	manifests := strings.Join(pathArg, ",")
+	manifestsSecret := strings.Join(pathArgSecret, ",")
+
+	// Separate runner for catching secret output
+	var secretStderr bytes.Buffer
+	runnerSecret := NewEnviron("", environ, os.Stdout, &secretStderr)
 
 	// If it is not a dry run, do a dry run first to validate Kubernetes manifests.
 	log("Validating Kubernetes manifests with a dry-run\n")
@@ -412,6 +426,14 @@ func run(c *cli.Context) error {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 
+		argsSecret := applyArgs(true, manifestsSecret)
+		err = runnerSecret.Run(kubectlCmd, argsSecret...)
+		if err != nil {
+			// Print last line of error to stderr
+			printTrimmedError(secretStderr)
+			return fmt.Errorf("Error: %s\n", err)
+		}
+
 		log("Applying Kubernetes manifests to the cluster\n")
 	}
 
@@ -420,6 +442,16 @@ func run(c *cli.Context) error {
 	args := applyArgs(c.Bool("dry-run"), manifests)
 	err = runner.Run(kubectlCmd, args...)
 	if err != nil {
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	// Apply Kubernetes secrets manifests
+
+	argsSecret := applyArgs(c.Bool("dry-run"), manifestsSecret)
+	err = runnerSecret.Run(kubectlCmd, argsSecret...)
+	if err != nil {
+		// Print last line of error to stderr
+		printTrimmedError(secretStderr)
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
@@ -486,6 +518,16 @@ func applyArgs(dryrun bool, file string) []string {
 	args = append(args, file)
 
 	return args
+}
+
+// printTrimmedError prints the last line of stderrbuf to stderr
+func printTrimmedError(stderrbuf bytes.Buffer) {
+	var lastLine string
+	scanner := bufio.NewScanner(strings.NewReader(string(stderrbuf.Bytes())))
+	for scanner.Scan() {
+		lastLine = scanner.Text()
+	}
+	fmt.Fprintf(os.Stderr, "%s\n", lastLine)
 }
 
 func log(format string, a ...interface{}) {
