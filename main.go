@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -135,9 +133,9 @@ func wrapMain() error {
 		}
 	}()
 
-	environ := os.Environ()
-	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
-	runner := NewEnviron(workspace.Path, environ, os.Stdout, os.Stderr)
+	e := os.Environ()
+	e = append(e, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
+	runner := NewEnviron(workspace.Path, e, os.Stdout, os.Stderr)
 
 	err = runner.Run(vargs.GCloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
@@ -212,10 +210,7 @@ func wrapMain() error {
 	}
 
 	outPaths := make(map[string]string)
-
-	// YAML files path for kubectl
 	pathArg := []string{}
-	pathArgSecret := []string{}
 
 	for t, content := range mapping {
 		if t == "" {
@@ -260,11 +255,7 @@ func wrapMain() error {
 
 		f.Close()
 
-		if t == vargs.Template {
-			pathArg = append(pathArg, outPaths[t])
-		} else {
-			pathArgSecret = append(pathArgSecret, outPaths[t])
-		}
+		pathArg = append(pathArg, outPaths[t])
 	}
 
 	if vargs.Verbose {
@@ -307,22 +298,6 @@ func wrapMain() error {
 	// Apply Kubernetes configuration files.
 	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
 	if err != nil {
-		return fmt.Errorf("Error: %s\n", err)
-	}
-
-	// Apply Kubernetes secrets files.
-	// Separate runner for catching secret output
-	var secStderr bytes.Buffer
-	runnerSecret := NewEnviron(workspace.Path, environ, os.Stdout, &secStderr)
-	err = runnerSecret.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArgSecret, ","))
-	if err != nil {
-		// Print the last line of stderr
-		var lastLine string
-		scanner := bufio.NewScanner(strings.NewReader(string(secStderr.Bytes())))
-		for scanner.Scan() {
-			lastLine = scanner.Text()
-		}
-		fmt.Fprintf(os.Stderr, "%s\n", lastLine)
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
