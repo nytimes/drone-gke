@@ -310,6 +310,13 @@ func wrapMain() error {
 	}
 
 	if vargs.KubeInject {
+		istioArgsBase := []string{"kube-inject", "--istioNamespace", vargs.IstioNamespace}
+
+		// use `--includeIPRanges`
+		if len(vargs.IncludeIPRanges) > 0 {
+			istioArgsBase = append(istioArgsBase, "--includeIPRanges", vargs.IncludeIPRanges)
+		}
+
 		// Inject istio sidecar proxy into pods
 		for _, manifestPath := range pathArg {
 			manifestBase := filepath.Base(manifestPath)
@@ -318,13 +325,11 @@ func wrapMain() error {
 			manifestBaseWithoutExt := strings.Replace(manifestBase, manifestExt, "", 1)
 			// output path would resemble "/tmp/.kube.istio.yml"
 			istioOutputPath := filepath.Join(manifestDir, fmt.Sprintf("%s.istio%s", manifestBaseWithoutExt, manifestExt))
-			// use `--includeIPRanges`
-			if len(vargs.IncludeIPRanges) > 0 {
-				err = runner.Run(vargs.IstioctlCmd, "kube-inject", "--istioNamespace", vargs.IstioNamespace, "--includeIPRanges", vargs.IncludeIPRanges, "--filename", manifestPath, "--output", istioOutputPath)
-			} else {
-				err = runner.Run(vargs.IstioctlCmd, "kube-inject", "--istioNamespace", vargs.IstioNamespace, "--filename", manifestPath, "--output", istioOutputPath)
-			}
-
+			// build up remaining arguments
+			istioArgs := []string{}
+			istioArgs = append(istioArgs, istioArgsBase...)
+			istioArgs = append(istioArgs, "--filename", manifestPath, "--output", istioOutputPath)
+			err = runner.Run(vargs.IstioctlCmd, istioArgs...)
 			if err != nil {
 				return fmt.Errorf("Error: %s\n", err)
 			}
