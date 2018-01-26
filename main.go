@@ -426,12 +426,14 @@ func run(c *cli.Context) error {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 
-		argsSecret := applyArgs(true, manifestsSecret)
-		err = runnerSecret.Run(kubectlCmd, argsSecret...)
-		if err != nil {
-			// Print last line of error to stderr
-			printTrimmedError(secretStderr)
-			return fmt.Errorf("Error: %s\n", err)
+		if len(manifestsSecret) > 0 {
+			argsSecret := applyArgs(true, manifestsSecret)
+			err = runnerSecret.Run(kubectlCmd, argsSecret...)
+			if err != nil {
+				// Print last line of error to stderr
+				printTrimmedError(secretStderr)
+				return fmt.Errorf("Error: %s\n", err)
+			}
 		}
 
 		log("Applying Kubernetes manifests to the cluster\n")
@@ -447,12 +449,14 @@ func run(c *cli.Context) error {
 
 	// Apply Kubernetes secrets manifests
 
-	argsSecret := applyArgs(c.Bool("dry-run"), manifestsSecret)
-	err = runnerSecret.Run(kubectlCmd, argsSecret...)
-	if err != nil {
-		// Print last line of error to stderr
-		printTrimmedError(secretStderr)
-		return fmt.Errorf("Error: %s\n", err)
+	if len(manifestsSecret) > 0 {
+		argsSecret := applyArgs(c.Bool("dry-run"), manifestsSecret)
+		err = runnerSecret.Run(kubectlCmd, argsSecret...)
+		if err != nil {
+			// Print last line of error to stderr
+			printTrimmedError(secretStderr)
+			return fmt.Errorf("Error: %s\n", err)
+		}
 	}
 
 	// Waiting for rollout to finish
