@@ -1,3 +1,5 @@
+> ⚠️  This branch contains experimental changes and should not be used in production
+
 # drone-gke
 
 Drone plugin to deploy container images to Kubernetes on Google Container Engine.
