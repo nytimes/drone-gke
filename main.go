@@ -319,7 +319,7 @@ func wrapMain() error {
 		if err != nil {
 			// Print the last line of stderr
 			var lastLine string
-			scanner := bufio.NewScanner(strings.NewReader(string(secStderr.Bytes())))
+			scanner := bufio.NewScanner(&secStderr)
 			for scanner.Scan() {
 				lastLine = scanner.Text()
 			}
