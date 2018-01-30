@@ -3,7 +3,15 @@
 Deprecated means no longer supported.
 Please update to the newest GA release.
 
+## 0.8.0
+
+### FEATURES & IMPROVEMENTS
+
+- Add functionality to wait for successful `Deployment` rollout using `kubectl rollout status`.
+
 ## 0.7.1
+
+### FEATURES & IMPROVEMENTS
 
 - `kubectl` is updated to 1.8.4.
 
@@ -11,7 +19,7 @@ Please update to the newest GA release.
 
 The plugin is updated to Drone 0.5+ style (environment variables).
 
-**BREAKING CHANGES**
+### BREAKING CHANGES
 
 - Consumes Drone 0.5+ style secrets, causing breaking changes with secrets and the GCP token across the board.
 Please read the documentation for reference usage.
@@ -23,7 +31,7 @@ To reference other environment variables, pass them via `vars`.
   - `DRONE_BRANCH`
   - `DRONE_TAG`
 
-**FEATURES & IMPROVEMENTS**
+### FEATURES & IMPROVEMENTS
 
 - `kubectl` is updated to 1.6.6.
 - Secret templates now have access to non-secret `vars` for template rendering.
