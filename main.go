@@ -527,7 +527,7 @@ func applyArgs(dryrun bool, file string) []string {
 // printTrimmedError prints the last line of stderrbuf to stderr
 func printTrimmedError(stderrbuf bytes.Buffer) {
 	var lastLine string
-	scanner := bufio.NewScanner(strings.NewReader(string(stderrbuf.Bytes())))
+	scanner := bufio.NewScanner(&stderrbuf)
 	for scanner.Scan() {
 		lastLine = scanner.Text()
 	}
