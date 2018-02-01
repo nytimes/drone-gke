@@ -2,7 +2,7 @@ FROM alpine:3.4
 
 RUN apk add --no-cache curl python
 
-ENV GOOGLE_CLOUD_SDK_VERSION=161.0.0
+ENV GOOGLE_CLOUD_SDK_VERSION=187.0.0
 
 # Install the gcloud SDK
 RUN curl -fsSLo google-cloud-sdk.tar.gz https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-$GOOGLE_CLOUD_SDK_VERSION-linux-x86_64.tar.gz && \
