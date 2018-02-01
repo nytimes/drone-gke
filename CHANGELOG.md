@@ -3,6 +3,12 @@
 Deprecated means no longer supported.
 Please update to the newest GA release.
 
+## 0.8.1
+
+### FEATURES & IMPROVEMENTS
+
+- When applying secret Kubernetes manifest files, error output is trimmed to the last line to prevent leaking secrets.
+
 ## 0.8.0
 
 ### FEATURES & IMPROVEMENTS
