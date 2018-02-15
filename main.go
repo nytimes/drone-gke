@@ -151,59 +151,52 @@ func wrapMain() error {
 	return nil
 }
 
-// getConfig parses and checks params
-func getConfig(c *cli.Context) (map[string]interface{}, error) {
-	config := make(map[string]interface{})
-
-	// Trim whitespace, to forgive the vagaries of YAML parsing.
-	config["token"] := strings.TrimSpace(c.String("token"))
-	if config["token"] == "" {
+// checkParams checks required params
+func checkParams(c *cli.Context) error {
+	if c.String("token") == "" {
 		return fmt.Errorf("Missing required param: token")
 	}
 
-	// Use project if explicitly stated, otherwise infer from the service account token.
-	project := c.String("project")
-	if project == "" {
-		project = getProjectFromToken(token)
-		if project == "" {
-			return fmt.Errorf("Missing required param: project")
-		}
-	}
-	config["project"] = project
-
-	config["zone"] = c.String("zone")
-	if config["zone"] == "" {
+	if c.String("zone") == "" {
 		return fmt.Errorf("Missing required param: zone")
 	}
 
 	return nil
 }
 
-func run(c *cli.Context) error {
-	// Get config
-	config, err := getConfig(c)
-	if err != nil {
-		return err
-	}
-
-	// Enforce default values.
-	kubeTemplate := c.String("kube-template")
-	if kubeTemplate == "" {
-		kubeTemplate = ".kube.yml"
-	}
-
-	secretTemplate := c.String("secret-template")
-	if secretTemplate == "" {
-		secretTemplate = ".kube.sec.yml"
-	}
-
+// parseVars parses vars (in JSON) and returns a map
+func parseVars(c *cli.Context) (map[string]interface{}, error) {
 	// Parse variables.
 	vars := make(map[string]interface{})
 	varsJSON := c.String("vars")
 	if varsJSON != "" {
 		if err := json.Unmarshal([]byte(varsJSON), &vars); err != nil {
-			return fmt.Errorf("Error parsing vars: %s\n", err)
+			return nil, fmt.Errorf("Error parsing vars: %s\n", err)
 		}
+	}
+	return vars, nil
+}
+
+func run(c *cli.Context) error {
+	// Check required params
+	err := checkParams(c)
+	if err != nil {
+		return err
+	}
+
+	// Use project if explicitly stated, otherwise infer from the service account token.
+	project := c.String("project")
+	if project == "" {
+		project = getProjectFromToken(c.String("token"))
+		if project == "" {
+			return fmt.Errorf("Missing required param: project")
+		}
+	}
+
+	// Parse variables.
+	vars, err := parseVars(c)
+	if err != nil {
+		return err
 	}
 
 	// Parse secrets.
@@ -244,7 +237,7 @@ func run(c *cli.Context) error {
 
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
-	err := ioutil.WriteFile(keyPath, []byte(token), 0600)
+	err = ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
 	if err != nil {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
@@ -322,8 +315,8 @@ func run(c *cli.Context) error {
 
 	// mapping is a map of the template filename to the data it uses for rendering.
 	mapping := map[string]map[string]interface{}{
-		kubeTemplate:   data,
-		secretTemplate: secretsAndData,
+		c.String("kube-template"):   data,
+		c.String("secret-template"): secretsAndData,
 	}
 
 	outPaths := make(map[string]string)
@@ -340,7 +333,7 @@ func run(c *cli.Context) error {
 		// Ensure the required template file exists.
 		_, err := os.Stat(t)
 		if os.IsNotExist(err) {
-			if t == kubeTemplate {
+			if t == c.String("kube-template") {
 				return fmt.Errorf("Error finding template: %s\n", err)
 			}
 
@@ -376,7 +369,7 @@ func run(c *cli.Context) error {
 		f.Close()
 
 		// Add the manifest filepath to the list of manifests to apply.
-		if t == kubeTemplate {
+		if t == c.String("kube-template") {
 			pathArg = append(pathArg, outPaths[t])
 		} else {
 			pathArgSecret = append(pathArgSecret, outPaths[t])
@@ -384,7 +377,7 @@ func run(c *cli.Context) error {
 	}
 
 	if c.Bool("verbose") {
-		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", outPaths[kubeTemplate])
+		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", outPaths[c.String("kube-template")])
 	}
 
 	// Print kubectl version.
@@ -482,7 +475,7 @@ func run(c *cli.Context) error {
 
 	for counter, deployment := range waitDeployments {
 		if waitDeploymentsCount > 1 {
-			counterProgress = fmt.Sprintf(" %d/%d", counter + 1, waitDeploymentsCount)
+			counterProgress = fmt.Sprintf(" %d/%d", counter+1, waitDeploymentsCount)
 		}
 
 		log(fmt.Sprintf("Waiting until rollout completes for %s%s\n", deployment, counterProgress))
@@ -549,5 +542,5 @@ func printTrimmedError(stderrbuf io.Reader, dest io.Writer) {
 }
 
 func log(format string, a ...interface{}) {
-	fmt.Printf("\n" + format, a...)
+	fmt.Printf("\n"+format, a...)
 }
