@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"flag"
 	// "io/ioutil"
-	// "os"
+	"os"
 	"strings"
 	"testing"
 
@@ -16,12 +16,13 @@ func TestCheckParams(t *testing.T) {
 	// Testing with cli.Context:
 	// https://github.com/urfave/cli/blob/master/context_test.go#L10
 
+	// No args set
 	set := flag.NewFlagSet("test-set", 0)
 	c := cli.NewContext(nil, set, nil)
 	err := checkParams(c)
 	assert.Error(t, err)
 
-	// Complete
+	// Required args set
 	set.String("token", "{}", "")
 	set.String("zone", "us-east1", "")
 	err = checkParams(c)
@@ -29,6 +30,7 @@ func TestCheckParams(t *testing.T) {
 }
 
 func TestParseVars(t *testing.T) {
+	// No vars set
 	set := flag.NewFlagSet("test-set", 0)
 	c := cli.NewContext(nil, set, nil)
 	vars, err := parseVars(c)
@@ -41,12 +43,48 @@ func TestParseVars(t *testing.T) {
 	assert.Equal(t, map[string]interface{}(nil), vars)
 	assert.Error(t, err)
 
+	// Valid
 	set = flag.NewFlagSet("test-set", 0)
 	set.String("vars", "{\"var0\": \"val0\", \"var1\": \"val1\"}", "")
 	c = cli.NewContext(nil, set, nil)
 	vars, err = parseVars(c)
 	assert.Equal(t, map[string]interface{}{"var0": "val0", "var1": "val1"}, vars)
 	assert.NoError(t, err)
+}
+
+func TestParseSecrets(t *testing.T) {
+	// Unset all secrets first
+	os.Clearenv()
+
+	// No secrets
+	secrets, err := parseSecrets()
+	assert.Equal(t, map[string]string{}, secrets)
+	assert.NoError(t, err)
+
+	// Normal
+	os.Setenv("SECRET_TEST0", "test0")
+	os.Setenv("SECRET_TEST1", "test1")
+	os.Setenv("SECRET_BASE64_TEST0", "dGVzdDA=")
+	secrets, err = parseSecrets()
+	assert.Equal(
+		t,
+		map[string]string{
+			"SECRET_TEST0":        "dGVzdDA=",
+			"SECRET_TEST1":        "dGVzdDE=",
+			"SECRET_BASE64_TEST0": "dGVzdDA=",
+		},
+		secrets)
+
+	assert.NoError(t, err)
+
+	// Empty string is not allowed
+	os.Clearenv()
+	os.Setenv("SECRET_TEST", "")
+	secrets, err = parseSecrets()
+	assert.Equal(t, map[string]string(nil), secrets)
+	assert.Error(t, err)
+
+	// Not able to use os.Setenv() to set env vars without "=", or duplicate keys
 }
 
 func TestGetProjectFromToken(t *testing.T) {

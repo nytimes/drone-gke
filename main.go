@@ -160,7 +160,6 @@ func checkParams(c *cli.Context) error {
 	if c.String("zone") == "" {
 		return fmt.Errorf("Missing required param: zone")
 	}
-
 	return nil
 }
 
@@ -177,28 +176,9 @@ func parseVars(c *cli.Context) (map[string]interface{}, error) {
 	return vars, nil
 }
 
-func run(c *cli.Context) error {
-	// Check required params
-	err := checkParams(c)
-	if err != nil {
-		return err
-	}
-
-	// Use project if explicitly stated, otherwise infer from the service account token.
-	project := c.String("project")
-	if project == "" {
-		project = getProjectFromToken(c.String("token"))
-		if project == "" {
-			return fmt.Errorf("Missing required param: project")
-		}
-	}
-
-	// Parse variables.
-	vars, err := parseVars(c)
-	if err != nil {
-		return err
-	}
-
+// parseSecrets parses secrets from environment variables (begining with "SECRET_"),
+// clears them and returns a map
+func parseSecrets() (map[string]string, error) {
 	// Parse secrets.
 	secrets := make(map[string]string)
 	for _, e := range os.Environ() {
@@ -211,18 +191,18 @@ func run(c *cli.Context) error {
 
 		// Check that key and value both exist.
 		if len(pair) != 2 {
-			return fmt.Errorf("Error: secret key and value mismatch, expected 2, got %d", len(pair))
+			return nil, fmt.Errorf("Error: missing secret value")
 		}
 
 		k := pair[0]
 		v := pair[1]
 
 		if _, ok := secrets[k]; ok {
-			return fmt.Errorf("Error: secret var %q shadows existing secret\n", k)
+			return nil, fmt.Errorf("Error: secret var %q shadows existing secret\n", k)
 		}
 
 		if v == "" {
-			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
+			return nil, fmt.Errorf("Error: secret var %q is an empty string\n", k)
 		}
 
 		if strings.HasPrefix(k, "SECRET_BASE64_") {
@@ -234,10 +214,15 @@ func run(c *cli.Context) error {
 
 		os.Unsetenv(k)
 	}
+	return secrets, nil
+}
+
+// fetchCredentials auths with gcloud and fetches credentials for kubectl
+func fetchCredentials(c *cli.Context, project string) error {
 
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
-	err = ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
+	err := ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
 	if err != nil {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
@@ -265,6 +250,38 @@ func run(c *cli.Context) error {
 	err = runner.Run(gcloudCmd, "container", "clusters", "get-credentials", c.String("cluster"), "--project", project, "--zone", c.String("zone"))
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
+	}
+	return nil
+}
+
+func run(c *cli.Context) error {
+	// Check required params
+	if err := checkParams(c); err != nil {
+		return err
+	}
+
+	// Use project if explicitly stated, otherwise infer from the service account token.
+	project := c.String("project")
+	if project == "" {
+		project = getProjectFromToken(c.String("token"))
+		if project == "" {
+			return fmt.Errorf("Missing required param: project")
+		}
+	}
+
+	// Parse variables and secrets
+	vars, err := parseVars(c)
+	if err != nil {
+		return err
+	}
+
+	secrets, err := parseSecrets()
+	if err != nil {
+		return err
+	}
+
+	if err := fetchCredentials(c, project); err != nil {
+		return err
 	}
 
 	data := map[string]interface{}{
@@ -381,6 +398,8 @@ func run(c *cli.Context) error {
 	}
 
 	// Print kubectl version.
+	environ := os.Environ()
+	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
 	err = runner.Run(kubectlCmd, "version")
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
