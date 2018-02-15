@@ -13,12 +13,12 @@ func TestDumpData(t *testing.T) {
 	// String
 	output := &bytes.Buffer{}
 	dumpData(output, "TEST 1", "test_string")
-	assert.Equal(t, output.String(), "---START TEST 1---\n\"test_string\"\n---END TEST 1---\n")
+	assert.Equal(t, "\n---START TEST 1---\n\"test_string\"\n---END TEST 1---\n", output.String())
 
 	// JSON encoding
 	output.Reset()
 	dumpData(output, "TEST 2", map[string]int{"one": 1})
-	assert.Equal(t, output.String(), "---START TEST 2---\n{\n\t\"one\": 1\n}\n---END TEST 2---\n")
+	assert.Equal(t, "\n---START TEST 2---\n{\n\t\"one\": 1\n}\n---END TEST 2---\n", output.String())
 }
 
 func TestDumpFile(t *testing.T) {
@@ -30,7 +30,7 @@ func TestDumpFile(t *testing.T) {
 	if assert.NoError(t, err) {
 		output := &bytes.Buffer{}
 		dumpFile(output, "TEST FILE", path)
-		assert.Equal(t, output.String(), "---START TEST FILE---\nhello, gke\n---END TEST FILE---\n")
+		assert.Equal(t, "\n---START TEST FILE---\nhello, gke\n---END TEST FILE---\n", output.String())
 	}
 
 	// Delete file

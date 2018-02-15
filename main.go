@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -150,12 +151,13 @@ func wrapMain() error {
 	return nil
 }
 
-func run(c *cli.Context) error {
-	// Check required params.
+// getConfig parses and checks params
+func getConfig(c *cli.Context) (map[string]interface{}, error) {
+	config := make(map[string]interface{})
 
 	// Trim whitespace, to forgive the vagaries of YAML parsing.
-	token := strings.TrimSpace(c.String("token"))
-	if token == "" {
+	config["token"] := strings.TrimSpace(c.String("token"))
+	if config["token"] == "" {
 		return fmt.Errorf("Missing required param: token")
 	}
 
@@ -167,9 +169,21 @@ func run(c *cli.Context) error {
 			return fmt.Errorf("Missing required param: project")
 		}
 	}
+	config["project"] = project
 
-	if c.String("zone") == "" {
+	config["zone"] = c.String("zone")
+	if config["zone"] == "" {
 		return fmt.Errorf("Missing required param: zone")
+	}
+
+	return nil
+}
+
+func run(c *cli.Context) error {
+	// Get config
+	config, err := getConfig(c)
+	if err != nil {
+		return err
 	}
 
 	// Enforce default values.
@@ -431,7 +445,7 @@ func run(c *cli.Context) error {
 			err = runnerSecret.Run(kubectlCmd, argsSecret...)
 			if err != nil {
 				// Print last line of error to stderr
-				printTrimmedError(secretStderr)
+				printTrimmedError(&secretStderr, os.Stderr)
 				return fmt.Errorf("Error: %s\n", err)
 			}
 		}
@@ -454,7 +468,7 @@ func run(c *cli.Context) error {
 		err = runnerSecret.Run(kubectlCmd, argsSecret...)
 		if err != nil {
 			// Print last line of error to stderr
-			printTrimmedError(secretStderr)
+			printTrimmedError(&secretStderr, os.Stderr)
 			return fmt.Errorf("Error: %s\n", err)
 		}
 	}
@@ -524,14 +538,14 @@ func applyArgs(dryrun bool, file string) []string {
 	return args
 }
 
-// printTrimmedError prints the last line of stderrbuf to stderr
-func printTrimmedError(stderrbuf bytes.Buffer) {
+// printTrimmedError prints the last line of stderrbuf to dest
+func printTrimmedError(stderrbuf io.Reader, dest io.Writer) {
 	var lastLine string
-	scanner := bufio.NewScanner(&stderrbuf)
+	scanner := bufio.NewScanner(stderrbuf)
 	for scanner.Scan() {
 		lastLine = scanner.Text()
 	}
-	fmt.Fprintf(os.Stderr, "%s\n", lastLine)
+	fmt.Fprintf(dest, "%s\n", lastLine)
 }
 
 func log(format string, a ...interface{}) {
