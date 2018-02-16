@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
 	"os"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ const (
 
 	keyPath = "/tmp/gcloud.json"
 	nsPath  = "/tmp/namespace.json"
+	templateBasePath = "/tmp"
 )
 
 var nsTemplate = `
@@ -160,6 +162,7 @@ func checkParams(c *cli.Context) error {
 	if c.String("zone") == "" {
 		return fmt.Errorf("Missing required param: zone")
 	}
+
 	return nil
 }
 
@@ -173,6 +176,7 @@ func parseVars(c *cli.Context) (map[string]interface{}, error) {
 			return nil, fmt.Errorf("Error parsing vars: %s\n", err)
 		}
 	}
+
 	return vars, nil
 }
 
@@ -214,27 +218,18 @@ func parseSecrets() (map[string]string, error) {
 
 		os.Unsetenv(k)
 	}
+
 	return secrets, nil
 }
 
 // fetchCredentials auths with gcloud and fetches credentials for kubectl
 func fetchCredentials(c *cli.Context, project string) error {
-
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
 	if err != nil {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
-
-	// Warn if the keyfile can't be deleted, but don't abort.
-	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
-	defer func() {
-		err := os.Remove(keyPath)
-		if err != nil {
-			log("Warning: error removing token file: %s\n", err)
-		}
-	}()
 
 	// Set up the execution environment.
 	environ := os.Environ()
@@ -251,8 +246,115 @@ func fetchCredentials(c *cli.Context, project string) error {
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
+
 	return nil
 }
+
+// templateData builds template and data maps
+func templateData(c *cli.Context, project string, vars map[string]interface{}, secrets map[string]string) (map[string]interface{}, map[string]interface{}, map[string]string, error) {
+	// Built-in template vars
+	templateData := map[string]interface{}{
+		"BUILD_NUMBER": c.String("drone-build-number"),
+		"COMMIT":       c.String("drone-commit"),
+		"BRANCH":       c.String("drone-branch"),
+		"TAG":          c.String("drone-tag"),
+
+		// Misc useful stuff.
+		// Note that secrets (including the GCP token) are excluded
+		"project":   project,
+		"zone":      c.String("zone"),
+		"cluster":   c.String("cluster"),
+		"namespace": c.String("namespace"),
+	}
+
+	secretsData := map[string]interface{}{}
+	secretsDataRedacted := map[string]string{}
+
+	// Add variables to data used for rendering both templates.
+	for k, v := range vars {
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
+		if _, ok := templateData[k]; ok {
+			return nil, nil, nil, fmt.Errorf("Error: var %q shadows existing var\n", k)
+		}
+
+		templateData[k] = v
+		secretsData[k] = v
+	}
+
+	// Add secrets to data used for rendering the Secret template.
+	for k, v := range secrets {
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
+		if _, ok := secretsData[k]; ok {
+			return nil, nil, nil, fmt.Errorf("Error: secret var %q shadows existing var\n", k)
+		}
+
+		secretsData[k] = v
+		secretsDataRedacted[k] = "VALUE REDACTED"
+	}
+
+	return templateData, secretsData, secretsDataRedacted, nil
+}
+
+// renderTemplates renders templates, writes into files and returns rendered template paths
+func renderTemplates(c *cli.Context, templateData map[string]interface{}, secretsData map[string]interface{}) (map[string]string, error) {
+	// mapping is a map of the template filename to the data it uses for rendering.
+	mapping := map[string]map[string]interface{}{
+		c.String("kube-template"):   templateData,
+		c.String("secret-template"): secretsData,
+	}
+
+	manifestPaths := make(map[string]string)
+
+	// YAML files path for kubectl
+	for t, content := range mapping {
+		if t == "" {
+			continue
+		}
+
+		// Ensure the required template file exists.
+		_, err := os.Stat(t)
+		if os.IsNotExist(err) {
+			if t == c.String("kube-template") {
+				return nil, fmt.Errorf("Error finding template: %s\n", err)
+			}
+
+			log("Warning: skipping optional template %s because it was not found\n", t)
+			continue
+		}
+
+		// Create the output file.
+		manifestPaths[t] = path.Join(templateBasePath, t)
+		f, err := os.Create(manifestPaths[t])
+		if err != nil {
+			return nil, fmt.Errorf("Error creating deployment file: %s\n", err)
+		}
+
+		// Read the template.
+		blob, err := ioutil.ReadFile(t)
+		if err != nil {
+			return nil, fmt.Errorf("Error reading template: %s\n", err)
+		}
+
+		// Parse the template.
+		tmpl, err := template.New(t).Option("missingkey=error").Parse(string(blob))
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing template: %s\n", err)
+		}
+
+		// Generate the manifest.
+		err = tmpl.Execute(f, content)
+		if err != nil {
+			return nil, fmt.Errorf("Error rendering deployment manifest from template: %s\n", err)
+		}
+
+		f.Close()
+	}
+
+	return manifestPaths, nil
+}
+
 
 func run(c *cli.Context) error {
 	// Check required params
@@ -280,125 +382,47 @@ func run(c *cli.Context) error {
 		return err
 	}
 
+	// Auth with gcloud and fetch kubectl credentials
 	if err := fetchCredentials(c, project); err != nil {
 		return err
 	}
 
-	data := map[string]interface{}{
-		"BUILD_NUMBER": c.String("drone-build-number"),
-		"COMMIT":       c.String("drone-commit"),
-		"BRANCH":       c.String("drone-branch"),
-		"TAG":          c.String("drone-tag"),
-
-		// Misc useful stuff.
-		// Note that secrets (including the GCP token) are excluded
-		"project":   project,
-		"zone":      c.String("zone"),
-		"cluster":   c.String("cluster"),
-		"namespace": c.String("namespace"),
-	}
-
-	secretsAndData := map[string]interface{}{}
-	secretsAndDataKeys := map[string]string{}
-
-	// Add variables to data used for rendering both templates.
-	for k, v := range vars {
-		// Don't allow vars to be overridden.
-		// We do this to ensure that the built-in template vars (above) can be relied upon.
-		if _, ok := data[k]; ok {
-			return fmt.Errorf("Error: var %q shadows existing var\n", k)
+	// Delete credentials from filesystem when finishing
+	// Warn if the keyfile can't be deleted, but don't abort.
+	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
+	defer func() {
+		err := os.Remove(keyPath)
+		if err != nil {
+			log("Warning: error removing token file: %s\n", err)
 		}
+	}()
 
-		data[k] = v
-		secretsAndData[k] = v
+	// Build template data maps
+	templateData, secretsData, secretsDataRedacted, err := templateData(c, project, vars, secrets)
+	if err != nil {
+		return err
 	}
 
-	// Add secrets to data used for rendering the Secret template.
-	for k, v := range secrets {
-		// Don't allow vars to be overridden.
-		// We do this to ensure that the built-in template vars (above) can be relied upon.
-		if _, ok := secretsAndData[k]; ok {
-			return fmt.Errorf("Error: secret var %q shadows existing var\n", k)
-		}
-
-		secretsAndData[k] = v
-		secretsAndDataKeys[k] = "VALUE REDACTED"
-	}
-
+	// Print variables and secret keys
 	if c.Bool("verbose") {
-		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", data)
-		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsAndDataKeys)
+		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", templateData)
+		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsDataRedacted)
 	}
 
-	// mapping is a map of the template filename to the data it uses for rendering.
-	mapping := map[string]map[string]interface{}{
-		c.String("kube-template"):   data,
-		c.String("secret-template"): secretsAndData,
+	// Render manifest templates
+	manifestPaths, err := renderTemplates(c, templateData, secretsData)
+	if err != nil {
+		return err
 	}
 
-	outPaths := make(map[string]string)
-
-	// YAML files path for kubectl
-	pathArg := []string{}
-	pathArgSecret := []string{}
-
-	for t, content := range mapping {
-		if t == "" {
-			continue
-		}
-
-		// Ensure the required template file exists.
-		_, err := os.Stat(t)
-		if os.IsNotExist(err) {
-			if t == c.String("kube-template") {
-				return fmt.Errorf("Error finding template: %s\n", err)
-			}
-
-			log("Warning: skipping optional template %s because it was not found\n", t)
-			continue
-		}
-
-		// Create the output file.
-		outPaths[t] = fmt.Sprintf("/tmp/%s", t)
-		f, err := os.Create(outPaths[t])
-		if err != nil {
-			return fmt.Errorf("Error creating deployment file: %s\n", err)
-		}
-
-		// Read the template.
-		blob, err := ioutil.ReadFile(t)
-		if err != nil {
-			return fmt.Errorf("Error reading template: %s\n", err)
-		}
-
-		// Parse the template.
-		tmpl, err := template.New(t).Option("missingkey=error").Parse(string(blob))
-		if err != nil {
-			return fmt.Errorf("Error parsing template: %s\n", err)
-		}
-
-		// Generate the manifest.
-		err = tmpl.Execute(f, content)
-		if err != nil {
-			return fmt.Errorf("Error rendering deployment manifest from template: %s\n", err)
-		}
-
-		f.Close()
-
-		// Add the manifest filepath to the list of manifests to apply.
-		if t == c.String("kube-template") {
-			pathArg = append(pathArg, outPaths[t])
-		} else {
-			pathArgSecret = append(pathArgSecret, outPaths[t])
-		}
-	}
-
+	// Print rendered file
 	if c.Bool("verbose") {
-		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", outPaths[c.String("kube-template")])
+		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", manifestPaths[c.String("kube-template")])
 	}
 
 	// Print kubectl version.
 	environ := os.Environ()
+	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
 	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
 	err = runner.Run(kubectlCmd, "version")
 	if err != nil {
@@ -435,8 +459,8 @@ func run(c *cli.Context) error {
 		}
 	}
 
-	manifests := strings.Join(pathArg, ",")
-	manifestsSecret := strings.Join(pathArgSecret, ",")
+	manifests := manifestPaths[c.String("kube-template")]
+	manifestsSecret := manifestPaths[c.String("secret-template")]
 
 	// Separate runner for catching secret output
 	var secretStderr bytes.Buffer
