@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"path"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"text/template"
@@ -27,8 +27,8 @@ const (
 	kubectlCmd = "kubectl"
 	timeoutCmd = "timeout"
 
-	keyPath = "/tmp/gcloud.json"
-	nsPath  = "/tmp/namespace.json"
+	keyPath          = "/tmp/gcloud.json"
+	nsPath           = "/tmp/namespace.json"
 	templateBasePath = "/tmp"
 )
 
@@ -153,6 +153,102 @@ func wrapMain() error {
 	return nil
 }
 
+func run(c *cli.Context) error {
+	// Check required params
+	if err := checkParams(c); err != nil {
+		return err
+	}
+
+	// Use project if explicitly stated, otherwise infer from the service account token.
+	project := c.String("project")
+	if project == "" {
+		project = getProjectFromToken(c.String("token"))
+		if project == "" {
+			return fmt.Errorf("Missing required param: project")
+		}
+	}
+
+	// Parse variables and secrets
+	vars, err := parseVars(c)
+	if err != nil {
+		return err
+	}
+
+	secrets, err := parseSecrets()
+	if err != nil {
+		return err
+	}
+
+	// Setup execution environment
+	environ := os.Environ()
+	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
+	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
+
+	// Auth with gcloud and fetch kubectl credentials
+	if err := fetchCredentials(c, project, runner); err != nil {
+		return err
+	}
+
+	// Delete credentials from filesystem when finishing
+	// Warn if the keyfile can't be deleted, but don't abort.
+	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
+	defer func() {
+		err := os.Remove(keyPath)
+		if err != nil {
+			log("Warning: error removing token file: %s\n", err)
+		}
+	}()
+
+	// Build template data maps
+	templateData, secretsData, secretsDataRedacted, err := templateData(c, project, vars, secrets)
+	if err != nil {
+		return err
+	}
+
+	// Print variables and secret keys
+	if c.Bool("verbose") {
+		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", templateData)
+		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsDataRedacted)
+	}
+
+	// Render manifest templates
+	manifestPaths, err := renderTemplates(c, templateData, secretsData)
+	if err != nil {
+		return err
+	}
+
+	// Print rendered file
+	if c.Bool("verbose") {
+		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", manifestPaths[c.String("kube-template")])
+	}
+
+	// Print kubectl version
+	if err := printKubectlVersion(runner); err != nil {
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	if err := setNamespace(c, project, runner); err != nil {
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	// Apply manifests
+	// Separate runner for catching secret output
+	var secretStderr bytes.Buffer
+	runnerSecret := NewEnviron("", environ, os.Stdout, &secretStderr)
+	if err := applyManifests(c, manifestPaths, runner, runnerSecret); err != nil {
+		// Print last line of error of applying secret manifest to stderr
+		printTrimmedError(&secretStderr, os.Stderr)
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	// Waiting for rollout to finish
+	if err := waitForRollout(c, runner); err != nil {
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	return nil
+}
+
 // checkParams checks required params
 func checkParams(c *cli.Context) error {
 	if c.String("token") == "" {
@@ -180,7 +276,7 @@ func parseVars(c *cli.Context) (map[string]interface{}, error) {
 	return vars, nil
 }
 
-// parseSecrets parses secrets from environment variables (begining with "SECRET_"),
+// parseSecrets parses secrets from environment variables (beginning with "SECRET_"),
 // clears them and returns a map
 func parseSecrets() (map[string]string, error) {
 	// Parse secrets.
@@ -222,20 +318,14 @@ func parseSecrets() (map[string]string, error) {
 	return secrets, nil
 }
 
-// fetchCredentials auths with gcloud and fetches credentials for kubectl
-func fetchCredentials(c *cli.Context, project string) error {
+// fetchCredentials authenticates with gcloud and fetches credentials for kubectl
+func fetchCredentials(c *cli.Context, project string, runner *Environ) error {
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
 	if err != nil {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
-
-	// Set up the execution environment.
-	environ := os.Environ()
-	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
-
-	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
 
 	err = runner.Run(gcloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
@@ -355,133 +445,59 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 	return manifestPaths, nil
 }
 
+func printKubectlVersion(runner *Environ) error {
+	return runner.Run(kubectlCmd, "version")
+}
 
-func run(c *cli.Context) error {
-	// Check required params
-	if err := checkParams(c); err != nil {
-		return err
+func setNamespace(c *cli.Context, project string, runner *Environ) error {
+	namespace := c.String("namespace")
+	if namespace == "" {
+		return nil
 	}
 
-	// Use project if explicitly stated, otherwise infer from the service account token.
-	project := c.String("project")
-	if project == "" {
-		project = getProjectFromToken(c.String("token"))
-		if project == "" {
-			return fmt.Errorf("Missing required param: project")
-		}
-	}
+	// Set the execution namespace.
+	log("Configuring kubectl to the %s namespace\n", namespace)
 
-	// Parse variables and secrets
-	vars, err := parseVars(c)
-	if err != nil {
-		return err
-	}
-
-	secrets, err := parseSecrets()
-	if err != nil {
-		return err
-	}
-
-	// Auth with gcloud and fetch kubectl credentials
-	if err := fetchCredentials(c, project); err != nil {
-		return err
-	}
-
-	// Delete credentials from filesystem when finishing
-	// Warn if the keyfile can't be deleted, but don't abort.
-	// We're almost certainly running inside an ephemeral container, so the file will be discarded when we're finished anyway.
-	defer func() {
-		err := os.Remove(keyPath)
-		if err != nil {
-			log("Warning: error removing token file: %s\n", err)
-		}
-	}()
-
-	// Build template data maps
-	templateData, secretsData, secretsDataRedacted, err := templateData(c, project, vars, secrets)
-	if err != nil {
-		return err
-	}
-
-	// Print variables and secret keys
-	if c.Bool("verbose") {
-		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", templateData)
-		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsDataRedacted)
-	}
-
-	// Render manifest templates
-	manifestPaths, err := renderTemplates(c, templateData, secretsData)
-	if err != nil {
-		return err
-	}
-
-	// Print rendered file
-	if c.Bool("verbose") {
-		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", manifestPaths[c.String("kube-template")])
-	}
-
-	// Print kubectl version.
-	environ := os.Environ()
-	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
-	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
-	err = runner.Run(kubectlCmd, "version")
-	if err != nil {
+	context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
+	if err := runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", namespace); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	namespace := c.String("namespace")
+	// Write the namespace manifest to a tmp file for application.
+	resource := fmt.Sprintf(nsTemplate, namespace)
 
-	if namespace != "" {
-		// Set the execution namespace.
-		log("Configuring kubectl to the %s namespace\n", namespace)
-
-		context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
-		err = runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", namespace)
-		if err != nil {
-			return fmt.Errorf("Error: %s\n", err)
-		}
-
-		// Write the namespace manifest to a tmp file for application.
-		resource := fmt.Sprintf(nsTemplate, namespace)
-
-		err := ioutil.WriteFile(nsPath, []byte(resource), 0600)
-		if err != nil {
-			return fmt.Errorf("Error writing namespace resource file: %s\n", err)
-		}
-
-		// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
-		log("Ensuring the %s namespace exists\n", namespace)
-
-		nsArgs := applyArgs(c.Bool("dry-run"), nsPath)
-		err = runner.Run(kubectlCmd, nsArgs...)
-		if err != nil {
-			return fmt.Errorf("Error: %s\n", err)
-		}
+	if err := ioutil.WriteFile(nsPath, []byte(resource), 0600); err != nil {
+		return fmt.Errorf("Error writing namespace resource file: %s\n", err)
 	}
+
+	// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
+	log("Ensuring the %s namespace exists\n", namespace)
+
+	nsArgs := applyArgs(c.Bool("dry-run"), nsPath)
+	if err := runner.Run(kubectlCmd, nsArgs...); err != nil {
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	return nil
+}
+
+func applyManifests(c *cli.Context, manifestPaths map[string]string, runner *Environ, runnerSecret *Environ) error {
 
 	manifests := manifestPaths[c.String("kube-template")]
 	manifestsSecret := manifestPaths[c.String("secret-template")]
-
-	// Separate runner for catching secret output
-	var secretStderr bytes.Buffer
-	runnerSecret := NewEnviron("", environ, os.Stdout, &secretStderr)
 
 	// If it is not a dry run, do a dry run first to validate Kubernetes manifests.
 	log("Validating Kubernetes manifests with a dry-run\n")
 
 	if !c.Bool("dry-run") {
 		args := applyArgs(true, manifests)
-		err = runner.Run(kubectlCmd, args...)
-		if err != nil {
+		if err := runner.Run(kubectlCmd, args...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 
 		if len(manifestsSecret) > 0 {
 			argsSecret := applyArgs(true, manifestsSecret)
-			err = runnerSecret.Run(kubectlCmd, argsSecret...)
-			if err != nil {
-				// Print last line of error to stderr
-				printTrimmedError(&secretStderr, os.Stderr)
+			if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
 				return fmt.Errorf("Error: %s\n", err)
 			}
 		}
@@ -490,27 +506,24 @@ func run(c *cli.Context) error {
 	}
 
 	// Actually apply Kubernetes manifests.
-
 	args := applyArgs(c.Bool("dry-run"), manifests)
-	err = runner.Run(kubectlCmd, args...)
-	if err != nil {
+	if err := runner.Run(kubectlCmd, args...); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	// Apply Kubernetes secrets manifests
-
 	if len(manifestsSecret) > 0 {
 		argsSecret := applyArgs(c.Bool("dry-run"), manifestsSecret)
-		err = runnerSecret.Run(kubectlCmd, argsSecret...)
-		if err != nil {
-			// Print last line of error to stderr
-			printTrimmedError(&secretStderr, os.Stderr)
+		if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 	}
 
-	// Waiting for rollout to finish
+	return nil
+}
 
+func waitForRollout(c *cli.Context, runner *Environ) error {
+	namespace := c.String("namespace")
 	waitDeployments := c.StringSlice("wait_deployments")
 	waitSeconds := c.Int("wait_seconds")
 	waitDeploymentsCount := len(waitDeployments)
@@ -536,8 +549,7 @@ func run(c *cli.Context) error {
 			path = timeoutCmd
 		}
 
-		err = runner.Run(path, command...)
-		if err != nil {
+		if err := runner.Run(path, command...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 	}
