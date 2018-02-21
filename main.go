@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -433,7 +434,9 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 		}
 
 		// Create the output file.
-		manifestPaths[t] = path.Join(templateBasePath, t)
+		// If template is a path, extract file name
+		filename := filepath.Base(t)
+		manifestPaths[t] = path.Join(templateBasePath, filename)
 		f, err := os.Create(manifestPaths[t])
 		if err != nil {
 			return nil, fmt.Errorf("Error creating deployment file: %s\n", err)
