@@ -17,6 +17,10 @@ import (
 	"github.com/urfave/cli"
 )
 
+type token struct {
+	ProjectID string `json:"project_id"`
+}
+
 var (
 	// Build revision is set at compile time.
 	rev string
@@ -182,7 +186,7 @@ func run(c *cli.Context) error {
 	// Setup execution environment
 	environ := os.Environ()
 	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
-	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
+	runner := NewBasicRunner("", environ, os.Stdout, os.Stderr)
 
 	// Auth with gcloud and fetch kubectl credentials
 	if err := fetchCredentials(c, project, runner); err != nil {
@@ -234,7 +238,7 @@ func run(c *cli.Context) error {
 	// Apply manifests
 	// Separate runner for catching secret output
 	var secretStderr bytes.Buffer
-	runnerSecret := NewEnviron("", environ, os.Stdout, &secretStderr)
+	runnerSecret := NewBasicRunner("", environ, os.Stdout, &secretStderr)
 	if err := applyManifests(c, manifestPaths, runner, runnerSecret); err != nil {
 		// Print last line of error of applying secret manifest to stderr
 		printTrimmedError(&secretStderr, os.Stderr)
@@ -259,7 +263,21 @@ func checkParams(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: zone")
 	}
 
+	if c.String("cluster") == "" {
+		return fmt.Errorf("Missing required param: cluster")
+	}
+
 	return nil
+}
+
+// getProjectFromToken gets project id from token
+func getProjectFromToken(j string) string {
+	t := token{}
+	err := json.Unmarshal([]byte(j), &t)
+	if err != nil {
+		return ""
+	}
+	return t.ProjectID
 }
 
 // parseVars parses vars (in JSON) and returns a map
@@ -319,7 +337,7 @@ func parseSecrets() (map[string]string, error) {
 }
 
 // fetchCredentials authenticates with gcloud and fetches credentials for kubectl
-func fetchCredentials(c *cli.Context, project string, runner *Environ) error {
+func fetchCredentials(c *cli.Context, project string, runner Runner) error {
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
@@ -445,11 +463,11 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 	return manifestPaths, nil
 }
 
-func printKubectlVersion(runner *Environ) error {
+func printKubectlVersion(runner Runner) error {
 	return runner.Run(kubectlCmd, "version")
 }
 
-func setNamespace(c *cli.Context, project string, runner *Environ) error {
+func setNamespace(c *cli.Context, project string, runner Runner) error {
 	namespace := c.String("namespace")
 	if namespace == "" {
 		return nil
@@ -481,7 +499,7 @@ func setNamespace(c *cli.Context, project string, runner *Environ) error {
 	return nil
 }
 
-func applyManifests(c *cli.Context, manifestPaths map[string]string, runner *Environ, runnerSecret *Environ) error {
+func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runner, runnerSecret Runner) error {
 
 	manifests := manifestPaths[c.String("kube-template")]
 	manifestsSecret := manifestPaths[c.String("secret-template")]
@@ -522,7 +540,7 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner *Env
 	return nil
 }
 
-func waitForRollout(c *cli.Context, runner *Environ) error {
+func waitForRollout(c *cli.Context, runner Runner) error {
 	namespace := c.String("namespace")
 	waitDeployments := c.StringSlice("wait_deployments")
 	waitSeconds := c.Int("wait_seconds")
@@ -555,19 +573,6 @@ func waitForRollout(c *cli.Context, runner *Environ) error {
 	}
 
 	return nil
-}
-
-type token struct {
-	ProjectID string `json:"project_id"`
-}
-
-func getProjectFromToken(j string) string {
-	t := token{}
-	err := json.Unmarshal([]byte(j), &t)
-	if err != nil {
-		return ""
-	}
-	return t.ProjectID
 }
 
 func applyArgs(dryrun bool, file string) []string {
