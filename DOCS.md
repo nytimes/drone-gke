@@ -1,93 +1,133 @@
-Use this plugin to deploy Docker images to Google Container Engine (GKE).
-Please read the GKE [documentation](https://cloud.google.com/container-engine/) before you begin.
-You will need to generate a service account and use it's [JSON credential file](https://cloud.google.com/storage/docs/authentication#service_accounts) to authenticate.
+Use this plugin to deploy Docker images to [Google Container Engine (GKE)][gke].
+
+[gke]: https://cloud.google.com/container-engine/
 
 ## Overview
-
-The project is inferred from the JSON credentials.
 
 The following parameters are used to configure this plugin:
 
 * `image` - this plugin's Docker image
+* *optional* `project` - project of the container cluster (defaults to inferring from the service account `token` credential)
 * `zone` - zone of the container cluster
 * `cluster` - name of the container cluster
-* `namespace` - Kubernetes namespace to operate in
-* `token` - service account's JSON credentials
-* *optional* `template` - Kubernetes template (like the [deployment object](http://kubernetes.io/docs/user-guide/deployments/)) (defaults to `.kube.yml`)
-* *optional* `secret_template` - Kubernetes template for the [secret object](http://kubernetes.io/docs/user-guide/secrets/) (defaults to `.kube.sec.yml`)
-* `vars` - variables to use in `template`
-* `secrets` - variables to use in `secret_template`. These are base64 encoded by the plugin.
-* `secrets_base64` - variables to use in `secret_template`. These should already be base64 encoded; the plugin will not do so.
+* *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
+* *optional* `template` - Kubernetes manifest template (defaults to `.kube.yml`)
+* *optional* `secret_template` - Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template (defaults to `.kube.sec.yml`)
+* *optional* `wait_deployments` - list of Deployments to wait for successful rollout, using `kubectl rollout status`
+* *optional* `wait_seconds` - if `wait_deployments` is set, number of seconds to wait before failing the build
+* `vars` - variables to use in `template` and `secret_template`
+* `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
 
-Optional (useful for debugging):
+### Debugging parameters
+
+These optional parameters are useful for debugging:
 
 * `dry_run` - do not apply the Kubernetes templates (defaults to `false`)
 * `verbose` - dump available `vars` and the generated Kubernetes `template` (excluding secrets) (defaults to `false`)
 
-## Templates
+## Credentials
 
-For details about the JSON Token, please view the [drone-gcr plugin](https://github.com/drone-plugins/drone-gcr/blob/master/DOCS.md#json-token).
+`drone-gke` requires a Google service account and uses it's [JSON credential file][service-account] to authenticate.
 
-## Examples
+This must be passed to the plugin under the target `token`.
 
-`.drone.yml`, particularly the `deploy:` section:
+The plugin infers the GCP project from the JSON credentials (`token`) and retrieves the GKE cluster credentials.
+
+[service-account]: https://cloud.google.com/storage/docs/authentication#service_accounts
+
+### Setting the JSON token
+
+Improved in Drone 0.5+, it is no longer necessary to align the JSON file.
+
+#### GUI
+
+Simply copy the contents of the JSON credentials file and paste it directly in the input field (for example for a secret named `GOOGLE_CREDENTIALS`).
+
+#### CLI
+
+```
+drone secret add \
+  --event push \
+  --event pull_request \
+  --event tag \
+  --event deployment \
+  --repository org/repo \
+  --name GOOGLE_CREDENTIALS \
+  --value @gcp-project-name-key-id.json
+```
+
+## Secrets
+
+`drone-gke` also supports creating Kubernetes secrets for you. These secrets should be passed from Drone secrets to the plugin as environment variables with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template` in their environment variable form (uppercased).
+
+Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
+
+## Example reference usage
+
+### `.drone.yml`
+
+Note particularly the `gke:` build step.
+
 ```yml
-build:
-  image: golang:1.7
+---
+pipeline:
+  build:
+    image: golang:1.8
+    environment:
+      - GOPATH=/drone
+      - CGO_ENABLED=0
+    commands:
+      - go get -t
+      - go test -v -cover
+      - go build -v -a
+    when:
+      event:
+        - push
+        - pull_request
 
-  environment:
-    - GOPATH=/drone
-
-  commands:
-    - go get -t
-    - go test -v -cover
-    - CGO_ENABLED=0 go build -v -a
-
-  when:
-    event:
-      - push
-      - pull_request
-
-publish:
   gcr:
+    image: plugins/docker
     storage_driver: overlay
-    repo: my-gke-project/my-app
-    tag: "$$COMMIT"
-    token: >
-      $$GOOGLE_CREDENTIALS
-
+    username: _json_key
+    registry: us.gcr.io
+    repo: us.gcr.io/my-gke-project/my-app
+    tag: ${DRONE_COMMIT}
+    secrets:
+      - source: GOOGLE_CREDENTIALS
+        target: docker_password
     when:
       event: push
       branch: master
 
-deploy:
   gke:
     image: nytimes/drone-gke
-
     zone: us-central1-a
-    cluster: my-k8s-cluster
-    namespace: $$BRANCH
-    token: >
-      $$GOOGLE_CREDENTIALS
-
+    cluster: my-gke-cluster
+    namespace: ${DRONE_BRANCH}
     vars:
-      image: gcr.io/my-gke-project/my-app:$$COMMIT
+      image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
       app: my-app
       env: dev
     secrets:
-      api_token: $$API_TOKEN
-    secrets_base64:
-      p12_cert: $$P12_CERT
-
+      - source: GOOGLE_CREDENTIALS
+        target: token
+      - source: API_TOKEN
+        target: secret_api_token
+      - source: P12_CERT
+        target: secret_base64_p12_cert
     when:
       event: push
       branch: master
 ```
 
-Example `.kube.yml`, notice the two yml configs separated by `---`:
+### `.kube.yml`
+
+Note the two Kubernetes yml resource manifests separated by `---`.
+
 ```yml
-kind: Deployment
+---
 apiVersion: extensions/v1beta1
+kind: Deployment
 
 metadata:
   name: {{.app}}-{{.env}}
@@ -111,11 +151,11 @@ spec:
             - name: API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: {{.app}}-{{.env}}
                   key: api-token
 ---
-kind: Service
 apiVersion: v1
+kind: Service
 
 metadata:
   name: {{.app}}-{{.env}}
@@ -126,28 +166,27 @@ spec:
     app: {{.app}}
     env: {{.env}}
   ports:
-    - port: 80
+    - name: http
+      protocol: TCP
+      port: 80
       targetPort: 8000
-protocol: TCP
 ```
 
-`.kube.sec.yml`, templated output will not be dumped when debugging:
+### `.kube.sec.yml`
+
+Note that the templated output will not be dumped when debugging.
+
 ```yml
-kind: Secret
+---
 apiVersion: v1
+kind: Secret
 
 metadata:
-  name: secrets
+  name: {{.app}}-{{.env}}
 
 type: Opaque
 
 data:
-  api-token: {{.api_token}}
-  p12-cert: {{.p12_cert}}
+  api-token: {{.SECRET_API_TOKEN}}
+  p12-cert: {{.SECRET_BASE64_P12_CERT}}
 ```
-
-## JSON Token
-
-See documentation from the [drone-gcr][drone-gcr] plugin on setting the JSON token.
-
-[drone-gcr]: https://github.com/drone-plugins/drone-gcr/blob/master/DOCS.md#json-token

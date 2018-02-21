@@ -4,7 +4,7 @@ workspace:
   path: src/github.com/NYTimes/drone-gke
 
 build_config: &config
-  image: golang:1.8
+  image: golang:1.9
   environment:
     - CGO_ENABLED=0
   commands:
@@ -12,7 +12,7 @@ build_config: &config
 
 pipeline:
   test:
-    image: golang:1.8
+    image: golang:1.9
     environment:
       - CGO_ENABLED=0
     commands:
@@ -48,7 +48,7 @@ pipeline:
     repo: nytimes/drone-gke
     tag:
       - "latest"
-      - "0.4"
+      - "0.8"
     secrets:
       - docker_username
       - docker_password

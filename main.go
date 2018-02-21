@@ -8,36 +8,25 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
-	"github.com/drone/drone-plugin-go/plugin"
+	"github.com/urfave/cli"
 )
 
-type GKE struct {
-	DryRun         bool                   `json:"dry_run"`
-	Verbose        bool                   `json:"verbose"`
-	Token          string                 `json:"token"`
-	GCloudCmd      string                 `json:"gcloud_cmd"`
-	KubectlCmd     string                 `json:"kubectl_cmd"`
-	Project        string                 `json:"project"`
-	Zone           string                 `json:"zone"`
-	Cluster        string                 `json:"cluster"`
-	Namespace      string                 `json:"namespace"`
-	Template       string                 `json:"template"`
-	SecretTemplate string                 `json:"secret_template"`
-	Vars           map[string]interface{} `json:"vars"`
-	Secrets        map[string]string      `json:"secrets"`
-
-	// SecretsBase64 holds secret values which are already base64 encoded and
-	// thus don't need to be re-encoded as they would be if they were in
-	// the Secrets field.
-	SecretsBase64 map[string]string `json:"secrets_base64"`
-}
-
 var (
+	// Build revision is set at compile time.
 	rev string
+)
+
+const (
+	gcloudCmd  = "gcloud"
+	kubectlCmd = "kubectl"
+	timeoutCmd = "timeout"
+
+	keyPath = "/tmp/gcloud.json"
+	nsPath  = "/tmp/namespace.json"
 )
 
 var nsTemplate = `
@@ -63,65 +52,185 @@ func wrapMain() error {
 
 	fmt.Printf("Drone GKE Plugin built from %s\n", rev)
 
-	// https://godoc.org/github.com/drone/drone-plugin-go/plugin
-	workspace := plugin.Workspace{}
-	repo := plugin.Repo{}
-	build := plugin.Build{}
-	system := plugin.System{}
-	vargs := GKE{}
+	app := cli.NewApp()
+	app.Name = "gke plugin"
+	app.Usage = "gke plugin"
+	app.Action = run
+	app.Version = fmt.Sprintf("1.0.0-%s", rev)
+	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:   "dry-run",
+			Usage:  "do not apply the Kubernetes manifests to the API server",
+			EnvVar: "PLUGIN_DRY_RUN",
+		},
+		cli.BoolFlag{
+			Name:   "verbose",
+			Usage:  "dump available vars and the generated Kubernetes manifest, keeping secrets hidden",
+			EnvVar: "PLUGIN_VERBOSE",
+		},
+		cli.StringFlag{
+			Name:   "token",
+			Usage:  "service account's JSON credentials",
+			EnvVar: "TOKEN",
+		},
+		cli.StringFlag{
+			Name:   "project",
+			Usage:  "GCP project name",
+			EnvVar: "PLUGIN_PROJECT",
+		},
+		cli.StringFlag{
+			Name:   "zone",
+			Usage:  "zone of the container cluster",
+			EnvVar: "PLUGIN_ZONE",
+		},
+		cli.StringFlag{
+			Name:   "cluster",
+			Usage:  "name of the container cluster",
+			EnvVar: "PLUGIN_CLUSTER",
+		},
+		cli.StringFlag{
+			Name:   "namespace",
+			Usage:  "Kubernetes namespace to operate in",
+			EnvVar: "PLUGIN_NAMESPACE",
+		},
+		cli.StringFlag{
+			Name:   "kube-template",
+			Usage:  "optional - template for Kubernetes resources, e.g. deployments",
+			EnvVar: "PLUGIN_TEMPLATE",
+			Value:  ".kube.yml",
+		},
+		cli.StringFlag{
+			Name:   "secret-template",
+			Usage:  "optional - template for Kubernetes Secret resources",
+			EnvVar: "PLUGIN_SECRET_TEMPLATE",
+			Value:  ".kube.sec.yml",
+		},
+		cli.StringFlag{
+			Name:   "vars",
+			Usage:  "variables to use while templating manifests",
+			EnvVar: "PLUGIN_VARS",
+		},
+		cli.StringFlag{
+			Name:   "drone-build-number",
+			Usage:  "Drone build number",
+			EnvVar: "DRONE_BUILD_NUMBER",
+		},
+		cli.StringFlag{
+			Name:   "drone-commit",
+			Usage:  "Git commit hash",
+			EnvVar: "DRONE_COMMIT",
+		},
+		cli.StringFlag{
+			Name:   "drone-branch",
+			Usage:  "Git branch",
+			EnvVar: "DRONE_BRANCH",
+		},
+		cli.StringFlag{
+			Name:   "drone-tag",
+			Usage:  "Git tag",
+			EnvVar: "DRONE_TAG",
+		},
+		cli.StringSliceFlag{
+			Name:   "wait_deployments",
+			Usage:  "List of Deployments to wait for successful rollout, using kubectl rollout status",
+			EnvVar: "PLUGIN_WAIT_DEPLOYMENTS",
+		},
+		cli.IntFlag{
+			Name:   "wait_seconds",
+			Usage:  "If wait_deployments is set, number of seconds to wait before failing the build",
+			EnvVar: "PLUGIN_WAIT_SECONDS",
+			Value:  0,
+		},
+	}
 
-	plugin.Param("workspace", &workspace)
-	plugin.Param("repo", &repo)
-	plugin.Param("build", &build)
-	plugin.Param("system", &system)
-	plugin.Param("vargs", &vargs)
-	plugin.MustParse()
+	if err := app.Run(os.Args); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func run(c *cli.Context) error {
 	// Check required params.
 
-	if vargs.Token == "" {
+	// Trim whitespace, to forgive the vagaries of YAML parsing.
+	token := strings.TrimSpace(c.String("token"))
+	if token == "" {
 		return fmt.Errorf("Missing required param: token")
 	}
 
-	if vargs.Project == "" {
-		vargs.Project = getProjectFromToken(vargs.Token)
+	// Use project if explicitly stated, otherwise infer from the service account token.
+	project := c.String("project")
+	if project == "" {
+		project = getProjectFromToken(token)
+		if project == "" {
+			return fmt.Errorf("Missing required param: project")
+		}
 	}
 
-	if vargs.Project == "" {
-		return fmt.Errorf("Missing required param: project")
-	}
-
-	if vargs.Zone == "" {
+	if c.String("zone") == "" {
 		return fmt.Errorf("Missing required param: zone")
 	}
 
-	sdkPath := "/google-cloud-sdk"
-	keyPath := "/tmp/gcloud.json"
-
-	// Defaults.
-
-	if vargs.GCloudCmd == "" {
-		vargs.GCloudCmd = fmt.Sprintf("%s/bin/gcloud", sdkPath)
+	// Enforce default values.
+	kubeTemplate := c.String("kube-template")
+	if kubeTemplate == "" {
+		kubeTemplate = ".kube.yml"
 	}
 
-	if vargs.KubectlCmd == "" {
-		vargs.KubectlCmd = fmt.Sprintf("%s/bin/kubectl", sdkPath)
+	secretTemplate := c.String("secret-template")
+	if secretTemplate == "" {
+		secretTemplate = ".kube.sec.yml"
 	}
 
-	if vargs.Template == "" {
-		vargs.Template = ".kube.yml"
+	// Parse variables.
+	vars := make(map[string]interface{})
+	varsJSON := c.String("vars")
+	if varsJSON != "" {
+		if err := json.Unmarshal([]byte(varsJSON), &vars); err != nil {
+			return fmt.Errorf("Error parsing vars: %s\n", err)
+		}
 	}
 
-	if vargs.SecretTemplate == "" {
-		vargs.SecretTemplate = ".kube.sec.yml"
-	}
+	// Parse secrets.
+	secrets := make(map[string]string)
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "SECRET_") {
+			continue
+		}
 
-	// Trim whitespace, to forgive the vagaries of YAML parsing.
-	vargs.Token = strings.TrimSpace(vargs.Token)
+		// Only split up to 2 parts.
+		pair := strings.SplitN(e, "=", 2)
+
+		// Check that key and value both exist.
+		if len(pair) != 2 {
+			return fmt.Errorf("Error: secret key and value mismatch, expected 2, got %d", len(pair))
+		}
+
+		k := pair[0]
+		v := pair[1]
+
+		if _, ok := secrets[k]; ok {
+			return fmt.Errorf("Error: secret var %q shadows existing secret\n", k)
+		}
+
+		if v == "" {
+			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
+		}
+
+		if strings.HasPrefix(k, "SECRET_BASE64_") {
+			secrets[k] = v
+		} else {
+			// Base64 encode secret strings for Kubernetes.
+			secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
+		}
+
+		os.Unsetenv(k)
+	}
 
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
-	err := ioutil.WriteFile(keyPath, []byte(vargs.Token), 0600)
+	err := ioutil.WriteFile(keyPath, []byte(token), 0600)
 	if err != nil {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
@@ -131,46 +240,45 @@ func wrapMain() error {
 	defer func() {
 		err := os.Remove(keyPath)
 		if err != nil {
-			fmt.Printf("Warning: error removing token file: %s\n", err)
+			log("Warning: error removing token file: %s\n", err)
 		}
 	}()
 
+	// Set up the execution environment.
 	environ := os.Environ()
 	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
-	runner := NewEnviron(workspace.Path, environ, os.Stdout, os.Stderr)
 
-	err = runner.Run(vargs.GCloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
+	runner := NewEnviron("", environ, os.Stdout, os.Stderr)
+
+	err = runner.Run(gcloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	err = runner.Run(vargs.GCloudCmd, "container", "clusters", "get-credentials", vargs.Cluster, "--project", vargs.Project, "--zone", vargs.Zone)
+	err = runner.Run(gcloudCmd, "container", "clusters", "get-credentials", c.String("cluster"), "--project", project, "--zone", c.String("zone"))
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	data := map[string]interface{}{
-		// http://readme.drone.io/usage/variables/#string-interpolation:2b8b8ac4006be88c769f5e3fd99b009a
-		"BUILD_NUMBER": build.Number,
-		"COMMIT":       build.Commit,
-		"BRANCH":       build.Branch,
-		"TAG":          "", // How?
-
-		// https://godoc.org/github.com/drone/drone-plugin-go/plugin#Workspace
-		"workspace": workspace,
-		"repo":      repo,
-		"build":     build,
-		"system":    system,
+		"BUILD_NUMBER": c.String("drone-build-number"),
+		"COMMIT":       c.String("drone-commit"),
+		"BRANCH":       c.String("drone-branch"),
+		"TAG":          c.String("drone-tag"),
 
 		// Misc useful stuff.
-		// Note that we don't include all of the vargs, since that includes the GCP token.
-		"project":   vargs.Project,
-		"zone":      vargs.Zone,
-		"cluster":   vargs.Cluster,
-		"namespace": vargs.Namespace,
+		// Note that secrets (including the GCP token) are excluded
+		"project":   project,
+		"zone":      c.String("zone"),
+		"cluster":   c.String("cluster"),
+		"namespace": c.String("namespace"),
 	}
 
-	for k, v := range vargs.Vars {
+	secretsAndData := map[string]interface{}{}
+	secretsAndDataKeys := map[string]string{}
+
+	// Add variables to data used for rendering both templates.
+	for k, v := range vars {
 		// Don't allow vars to be overridden.
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
 		if _, ok := data[k]; ok {
@@ -178,37 +286,30 @@ func wrapMain() error {
 		}
 
 		data[k] = v
+		secretsAndData[k] = v
 	}
 
-	if vargs.Verbose {
-		dump := data
-		delete(dump, "workspace")
-		dumpData(os.Stdout, "DATA (Workspace Values Omitted)", dump)
-	}
-
-	secrets := map[string]interface{}{}
-	for k, v := range vargs.Secrets {
-		if v == "" {
-			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
+	// Add secrets to data used for rendering the Secret template.
+	for k, v := range secrets {
+		// Don't allow vars to be overridden.
+		// We do this to ensure that the built-in template vars (above) can be relied upon.
+		if _, ok := secretsAndData[k]; ok {
+			return fmt.Errorf("Error: secret var %q shadows existing var\n", k)
 		}
 
-		// Base64 encode secret strings.
-		secrets[k] = base64.StdEncoding.EncodeToString([]byte(v))
-	}
-	for k, v := range vargs.SecretsBase64 {
-		if _, ok := secrets[k]; ok {
-			return fmt.Errorf("Error: secret var %q is already set in Secrets\n", k)
-		}
-		if v == "" {
-			return fmt.Errorf("Error: secret var %q is an empty string\n", k)
-		}
-		// Don't base64 encode these secrets, they already are.
-		secrets[k] = v
+		secretsAndData[k] = v
+		secretsAndDataKeys[k] = "VALUE REDACTED"
 	}
 
+	if c.Bool("verbose") {
+		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", data)
+		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsAndDataKeys)
+	}
+
+	// mapping is a map of the template filename to the data it uses for rendering.
 	mapping := map[string]map[string]interface{}{
-		vargs.Template:       data,
-		vargs.SecretTemplate: secrets,
+		kubeTemplate:   data,
+		secretTemplate: secretsAndData,
 	}
 
 	outPaths := make(map[string]string)
@@ -222,108 +323,171 @@ func wrapMain() error {
 			continue
 		}
 
-		inPath := filepath.Join(workspace.Path, t)
-		bn := filepath.Base(inPath)
-
 		// Ensure the required template file exists.
-		_, err := os.Stat(inPath)
+		_, err := os.Stat(t)
 		if os.IsNotExist(err) {
-			if t == vargs.Template {
+			if t == kubeTemplate {
 				return fmt.Errorf("Error finding template: %s\n", err)
-			} else {
-				fmt.Printf("Warning: skipping optional template %s, it was not found\n", t)
-				continue
 			}
+
+			log("Warning: skipping optional template %s because it was not found\n", t)
+			continue
 		}
 
-		// Generate the file.
-		blob, err := ioutil.ReadFile(inPath)
-		if err != nil {
-			return fmt.Errorf("Error reading template: %s\n", err)
-		}
-
-		tmpl, err := template.New(bn).Option("missingkey=error").Parse(string(blob))
-		if err != nil {
-			return fmt.Errorf("Error parsing template: %s\n", err)
-		}
-
-		outPaths[t] = fmt.Sprintf("/tmp/%s", bn)
+		// Create the output file.
+		outPaths[t] = fmt.Sprintf("/tmp/%s", t)
 		f, err := os.Create(outPaths[t])
 		if err != nil {
 			return fmt.Errorf("Error creating deployment file: %s\n", err)
 		}
 
+		// Read the template.
+		blob, err := ioutil.ReadFile(t)
+		if err != nil {
+			return fmt.Errorf("Error reading template: %s\n", err)
+		}
+
+		// Parse the template.
+		tmpl, err := template.New(t).Option("missingkey=error").Parse(string(blob))
+		if err != nil {
+			return fmt.Errorf("Error parsing template: %s\n", err)
+		}
+
+		// Generate the manifest.
 		err = tmpl.Execute(f, content)
 		if err != nil {
-			return fmt.Errorf("Error executing deployment template: %s\n", err)
+			return fmt.Errorf("Error rendering deployment manifest from template: %s\n", err)
 		}
 
 		f.Close()
 
-		if t == vargs.Template {
+		// Add the manifest filepath to the list of manifests to apply.
+		if t == kubeTemplate {
 			pathArg = append(pathArg, outPaths[t])
 		} else {
 			pathArgSecret = append(pathArgSecret, outPaths[t])
 		}
 	}
 
-	if vargs.Verbose {
-		dumpFile(os.Stdout, "DEPLOYMENT (Secret Template Omitted)", outPaths[vargs.Template])
+	if c.Bool("verbose") {
+		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", outPaths[kubeTemplate])
 	}
 
-	if vargs.DryRun {
-		fmt.Println("Skipping kubectl apply, because dry_run: true")
-		return nil
+	// Print kubectl version.
+	err = runner.Run(kubectlCmd, "version")
+	if err != nil {
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	// Set the execution namespace.
-	if len(vargs.Namespace) > 0 {
-		fmt.Printf("Configuring kubectl to the %s namespace\n", vargs.Namespace)
+	namespace := c.String("namespace")
 
-		context := strings.Join([]string{"gke", vargs.Project, vargs.Zone, vargs.Cluster}, "_")
+	if namespace != "" {
+		// Set the execution namespace.
+		log("Configuring kubectl to the %s namespace\n", namespace)
 
-		err = runner.Run(vargs.KubectlCmd, "config", "set-context", context, "--namespace", vargs.Namespace)
+		context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
+		err = runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", namespace)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 
-		resource := fmt.Sprintf(nsTemplate, vargs.Namespace)
-		nsPath := "/tmp/namespace.json"
+		// Write the namespace manifest to a tmp file for application.
+		resource := fmt.Sprintf(nsTemplate, namespace)
 
-		// Write namespace resource file to tmp file to be picked up by the 'kubectl' command.
-		// This is inside the ephemeral plugin container, not on the host.
 		err := ioutil.WriteFile(nsPath, []byte(resource), 0600)
 		if err != nil {
 			return fmt.Errorf("Error writing namespace resource file: %s\n", err)
 		}
 
 		// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
-		err = runner.Run(vargs.KubectlCmd, "apply", "--filename", nsPath)
+		log("Ensuring the %s namespace exists\n", namespace)
+
+		nsArgs := applyArgs(c.Bool("dry-run"), nsPath)
+		err = runner.Run(kubectlCmd, nsArgs...)
 		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 	}
 
-	// Apply Kubernetes configuration files.
-	err = runner.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArg, ","))
+	manifests := strings.Join(pathArg, ",")
+	manifestsSecret := strings.Join(pathArgSecret, ",")
+
+	// Separate runner for catching secret output
+	var secretStderr bytes.Buffer
+	runnerSecret := NewEnviron("", environ, os.Stdout, &secretStderr)
+
+	// If it is not a dry run, do a dry run first to validate Kubernetes manifests.
+	log("Validating Kubernetes manifests with a dry-run\n")
+
+	if !c.Bool("dry-run") {
+		args := applyArgs(true, manifests)
+		err = runner.Run(kubectlCmd, args...)
+		if err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+
+		if len(manifestsSecret) > 0 {
+			argsSecret := applyArgs(true, manifestsSecret)
+			err = runnerSecret.Run(kubectlCmd, argsSecret...)
+			if err != nil {
+				// Print last line of error to stderr
+				printTrimmedError(secretStderr)
+				return fmt.Errorf("Error: %s\n", err)
+			}
+		}
+
+		log("Applying Kubernetes manifests to the cluster\n")
+	}
+
+	// Actually apply Kubernetes manifests.
+
+	args := applyArgs(c.Bool("dry-run"), manifests)
+	err = runner.Run(kubectlCmd, args...)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	// Apply Kubernetes secrets files.
-	// Separate runner for catching secret output
-	if len(pathArgSecret) > 0 {
-		var secStderr bytes.Buffer
-		runnerSecret := NewEnviron(workspace.Path, environ, os.Stdout, &secStderr)
-		err = runnerSecret.Run(vargs.KubectlCmd, "apply", "--filename", strings.Join(pathArgSecret, ","))
+	// Apply Kubernetes secrets manifests
+
+	if len(manifestsSecret) > 0 {
+		argsSecret := applyArgs(c.Bool("dry-run"), manifestsSecret)
+		err = runnerSecret.Run(kubectlCmd, argsSecret...)
 		if err != nil {
-			// Print the last line of stderr
-			var lastLine string
-			scanner := bufio.NewScanner(&secStderr)
-			for scanner.Scan() {
-				lastLine = scanner.Text()
-			}
-			fmt.Fprintf(os.Stderr, "%s\n", lastLine)
+			// Print last line of error to stderr
+			printTrimmedError(secretStderr)
+			return fmt.Errorf("Error: %s\n", err)
+		}
+	}
+
+	// Waiting for rollout to finish
+
+	waitDeployments := c.StringSlice("wait_deployments")
+	waitSeconds := c.Int("wait_seconds")
+	waitDeploymentsCount := len(waitDeployments)
+	counterProgress := ""
+
+	for counter, deployment := range waitDeployments {
+		if waitDeploymentsCount > 1 {
+			counterProgress = fmt.Sprintf(" %d/%d", counter + 1, waitDeploymentsCount)
+		}
+
+		log(fmt.Sprintf("Waiting until rollout completes for %s%s\n", deployment, counterProgress))
+
+		command := []string{"rollout", "status", "deployment", deployment}
+
+		if namespace != "" {
+			command = append(command, "--namespace", namespace)
+		}
+
+		path := kubectlCmd
+
+		if waitSeconds != 0 {
+			command = append([]string{"-t", strconv.Itoa(waitSeconds), path}, command...)
+			path = timeoutCmd
+		}
+
+		err = runner.Run(path, command...)
+		if err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 	}
@@ -342,4 +506,34 @@ func getProjectFromToken(j string) string {
 		return ""
 	}
 	return t.ProjectID
+}
+
+func applyArgs(dryrun bool, file string) []string {
+	args := []string{
+		"apply",
+		"--record",
+	}
+
+	if dryrun {
+		args = append(args, "--dry-run")
+	}
+
+	args = append(args, "--filename")
+	args = append(args, file)
+
+	return args
+}
+
+// printTrimmedError prints the last line of stderrbuf to stderr
+func printTrimmedError(stderrbuf bytes.Buffer) {
+	var lastLine string
+	scanner := bufio.NewScanner(&stderrbuf)
+	for scanner.Scan() {
+		lastLine = scanner.Text()
+	}
+	fmt.Fprintf(os.Stderr, "%s\n", lastLine)
+}
+
+func log(format string, a ...interface{}) {
+	fmt.Printf("\n" + format, a...)
 }
