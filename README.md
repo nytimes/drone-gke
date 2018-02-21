@@ -37,51 +37,6 @@ Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be 
 **This could use your contribution!**
 Help us create a runnable test suite.
 
-## Docker
+## See also
 
-Build the Docker image with the following commands:
-
-```
-OWNER=your-docker-hub-user ./bin/dist
-```
-
-## Usage
-
-Executing locally from the working directory:
-
-```
-# Deploy the manifest templates in example/
-$ cd example/
-
-# Set to the path of your GCP service account JSON file
-$ export GOOGLE_APPLICATION_CREDENTIALS=xxx
-
-# Set to your cluster
-$ export CLUSTER=yyy
-
-# Set to your cluster's zone
-$ export ZONE=zzz
-
-# The variables required for the templates in JSON format
-$ cat vars.json
-{
-   "app": "echo",
-   "env": "dev",
-   "image": "gcr.io/google_containers/echoserver:1.4"
-}
-
-# Execute the plugin
-$ docker run --rm \
-  -e PLUGIN_CLUSTER="$CLUSTER" \
-  -e PLUGIN_ZONE="$ZONE" \
-  -e PLUGIN_NAMESPACE=drone-gke \
-  -e PLUGIN_VARS="$(cat vars.json)" \
-  -e TOKEN="$(cat $GOOGLE_APPLICATION_CREDENTIALS)" \
-  -e SECRET_API_TOKEN=123 \
-  -e SECRET_BASE64_P12_CERT="cDEyCg==" \
-  -v $(pwd):$(pwd) \
-  -w $(pwd) \
-  nytimes/drone-gke --dry-run --verbose
-
-# Remove --dry-run to deploy
-```
+* [UKHomeOffice/drone-kubernetes](https://github.com/UKHomeOffice/drone-kubernetes)
