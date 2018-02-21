@@ -334,7 +334,18 @@ func TestApplyManifests(t *testing.T) {
 }
 
 func TestWaitForRollout(t *testing.T) {
+	// // No error
+	set := flag.NewFlagSet("test-set", 0)
+	// set.Set("wait_deployments", "[]string{\"a\",\"b\"}")
+	// set.Int("wait_seconds", 256, "")
+	set.String("namespace", "test-ns", "")
+	c := cli.NewContext(nil, set, nil)
 
+	testRunner := new(MockedRunner)
+	// testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1_cluster-0", "--namespace", "test-ns"}).Return(nil)
+	err := waitForRollout(c, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
 }
 
 func TestApplyArgs(t *testing.T) {
