@@ -246,7 +246,7 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	// Waiting for rollout to finish
+	// Wait for rollout to finish
 	if err := waitForRollout(c, runner, nil); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
@@ -466,10 +466,12 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 	return manifestPaths, nil
 }
 
+// printKubectlVersion runs kubectl version
 func printKubectlVersion(runner Runner) error {
 	return runner.Run(kubectlCmd, "version")
 }
 
+// setNamespace sets namespace of current kubectl context and ensure it exists
 func setNamespace(c *cli.Context, project string, runner Runner) error {
 	namespace := c.String("namespace")
 	if namespace == "" {
@@ -502,6 +504,7 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 	return nil
 }
 
+// applyManifests applies manifests using kubectl apply
 func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runner, runnerSecret Runner) error {
 
 	manifests := manifestPaths[c.String("kube-template")]
@@ -586,6 +589,7 @@ func waitForRollout(c *cli.Context, runner Runner, waitDeployments []string) err
 	return nil
 }
 
+// applyArgs creates args slice for kubectl apply command
 func applyArgs(dryrun bool, file string) []string {
 	args := []string{
 		"apply",
