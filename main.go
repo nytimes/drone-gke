@@ -227,11 +227,12 @@ func run(c *cli.Context) error {
 		dumpFile(os.Stdout, "RENDERED MANIFEST (Secret Manifest Omitted)", manifestPaths[c.String("kube-template")])
 	}
 
-	// Print kubectl version
+	// kubectl version
 	if err := printKubectlVersion(runner); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
+	// Set namespace and ensure it exists
 	if err := setNamespace(c, project, runner); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
