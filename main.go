@@ -247,7 +247,7 @@ func run(c *cli.Context) error {
 	}
 
 	// Waiting for rollout to finish
-	if err := waitForRollout(c, runner); err != nil {
+	if err := waitForRollout(c, runner, nil); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
@@ -543,9 +543,17 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 	return nil
 }
 
-func waitForRollout(c *cli.Context, runner Runner) error {
+// waitForRollout executes kubectl to wait for rollout to complete before continuing
+// The 3rd parameter waitDeployments is temporary and only used for testing, it
+// will be removed once better solution found
+func waitForRollout(c *cli.Context, runner Runner, waitDeployments []string) error {
+	// waitDeployments parameter overrides the one in cli.Context
+	// temporary for testing
+	if len(waitDeployments) == 0 {
+		waitDeployments = c.StringSlice("wait_deployments")
+	}
+
 	namespace := c.String("namespace")
-	waitDeployments := c.StringSlice("wait_deployments")
 	waitSeconds := c.Int("wait_seconds")
 	waitDeploymentsCount := len(waitDeployments)
 	counterProgress := ""
