@@ -11,7 +11,7 @@ func TestEnvironRun(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	e := &Environ{
+	e := &BasicRunner{
 		dir:    "/tmp",
 		env:    []string{"A=1"},
 		stdout: stdout,

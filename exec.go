@@ -7,15 +7,20 @@ import (
 	"strings"
 )
 
-type Environ struct {
+type Runner interface {
+	Run(name string, arg ...string) error
+}
+
+type BasicRunner struct {
+	Runner
 	dir    string
 	env    []string
 	stdout io.Writer
 	stderr io.Writer
 }
 
-func NewEnviron(dir string, env []string, stdout, stderr io.Writer) *Environ {
-	return &Environ{
+func NewBasicRunner(dir string, env []string, stdout, stderr io.Writer) *BasicRunner {
+	return &BasicRunner{
 		dir:    dir,
 		env:    env,
 		stdout: stdout,
@@ -24,7 +29,7 @@ func NewEnviron(dir string, env []string, stdout, stderr io.Writer) *Environ {
 }
 
 // Run executes the given program.
-func (e *Environ) Run(name string, arg ...string) error {
+func (e *BasicRunner) Run(name string, arg ...string) error {
 	cmd := exec.Command(name, arg...)
 	cmd.Dir = e.dir
 	cmd.Env = e.env
