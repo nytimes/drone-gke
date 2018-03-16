@@ -17,6 +17,7 @@ The following parameters are used to configure this plugin:
 * *optional* `wait_seconds` - if `wait_deployments` is set, number of seconds to wait before failing the build
 * `vars` - variables to use in `template` and `secret_template`
 * `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
+* *optional* `expand_env_vars` - flag to specify whether the plugin should expand environment variables on values declared in `vars`
 
 ### Debugging parameters
 
@@ -104,10 +105,12 @@ pipeline:
     zone: us-central1-a
     cluster: my-gke-cluster
     namespace: ${DRONE_BRANCH}
+    expand_env_vars: true
     vars:
       image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
       app: my-app
       env: dev
+      user: $${USER}
     secrets:
       - source: GOOGLE_CREDENTIALS
         target: token
@@ -148,6 +151,8 @@ spec:
           env:
             - name: APP_NAME
               value: {{.app}}
+            - name: USER
+              value: {{.user}}
             - name: API_TOKEN
               valueFrom:
                 secretKeyRef:

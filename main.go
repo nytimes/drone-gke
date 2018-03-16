@@ -118,6 +118,11 @@ func wrapMain() error {
 			Usage:  "variables to use while templating manifests",
 			EnvVar: "PLUGIN_VARS",
 		},
+		cli.BoolFlag{
+			Name:   "expand-env-vars",
+			Usage:  "expand environment variables contents on vars",
+			EnvVar: "PLUGIN_EXPAND_ENV_VARS",
+		},
 		cli.StringFlag{
 			Name:   "drone-build-number",
 			Usage:  "Drone build number",
@@ -386,6 +391,12 @@ func templateData(c *cli.Context, project string, vars map[string]interface{}, s
 		// We do this to ensure that the built-in template vars (above) can be relied upon.
 		if _, ok := templateData[k]; ok {
 			return nil, nil, nil, fmt.Errorf("Error: var %q shadows existing var\n", k)
+		}
+
+		if c.Bool("expand-env-vars") {
+			if rawValue, ok := v.(string); ok {
+				v = os.ExpandEnv(rawValue)
+			}
 		}
 
 		templateData[k] = v

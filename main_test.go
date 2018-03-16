@@ -149,7 +149,7 @@ func TestTemplateData(t *testing.T) {
 
 	// No error
 	// Create data maps
-	vars := map[string]interface{}{"key0": "val0"}
+	vars := map[string]interface{}{"key0": "val0", "key1": "hello $USER"}
 	secrets := map[string]string{"SECRET_TEST": "test_val"}
 
 	// Call
@@ -166,9 +166,71 @@ func TestTemplateData(t *testing.T) {
 		"cluster":      "cluster-0",
 		"namespace":    "",
 		"key0":         "val0",
+		"key1":         "hello $USER",
 	}, tmplData)
 
-	assert.Equal(t, map[string]interface{}{"key0": "val0", "SECRET_TEST": "test_val"}, secretsData)
+	assert.Equal(t, map[string]interface{}{
+		"key0":        "val0",
+		"key1":        "hello $USER",
+		"SECRET_TEST": "test_val",
+	}, secretsData)
+	assert.Equal(t, map[string]string{"SECRET_TEST": "VALUE REDACTED"}, secretsDataRedacted)
+	assert.NoError(t, err)
+
+	// Variable overrides existing ones
+	vars = map[string]interface{}{"zone": "us-east4"}
+	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1", vars, secrets)
+	assert.Error(t, err)
+
+	// Secret overrides variable
+	vars = map[string]interface{}{"SECRET_TEST": "val0"}
+	secrets = map[string]string{"SECRET_TEST": "test_val"}
+	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1", vars, secrets)
+	assert.Error(t, err)
+}
+
+func TestTemplateDataExpandingVars(t *testing.T) {
+	os.Clearenv()
+	os.Setenv("USER", "drone-user")
+
+	// Set cli.Context with data
+	set := flag.NewFlagSet("test-set", 0)
+	set.String("drone-branch", "master", "")
+	set.String("drone-build-number", "2", "")
+	set.String("drone-commit", "e0f21b90a", "")
+	set.String("drone-tag", "v0.0.0", "")
+	set.String("cluster", "cluster-0", "")
+	set.String("zone", "us-east1", "")
+	set.Bool("expand-env-vars", true, "")
+	c := cli.NewContext(nil, set, nil)
+
+	// No error
+	// Create data maps
+	vars := map[string]interface{}{"key0": "val0", "key1": "hello $USER"}
+	secrets := map[string]string{"SECRET_TEST": "test_val"}
+
+	// Call
+	tmplData, secretsData, secretsDataRedacted, err := templateData(c, "test-project", vars, secrets)
+
+	// Verify
+	assert.Equal(t, map[string]interface{}{
+		"BRANCH":       "master",
+		"BUILD_NUMBER": "2",
+		"COMMIT":       "e0f21b90a",
+		"TAG":          "v0.0.0",
+		"project":      "test-project",
+		"zone":         "us-east1",
+		"cluster":      "cluster-0",
+		"namespace":    "",
+		"key0":         "val0",
+		"key1":         "hello drone-user",
+	}, tmplData)
+
+	assert.Equal(t, map[string]interface{}{
+		"key0":        "val0",
+		"key1":        "hello drone-user",
+		"SECRET_TEST": "test_val",
+	}, secretsData)
 	assert.Equal(t, map[string]string{"SECRET_TEST": "VALUE REDACTED"}, secretsDataRedacted)
 	assert.NoError(t, err)
 
