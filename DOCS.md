@@ -17,7 +17,7 @@ The following parameters are used to configure this plugin:
 * *optional* `wait_seconds` - if `wait_deployments` is set, number of seconds to wait before failing the build
 * `vars` - variables to use in `template` and `secret_template` (see [below](#available-vars) for details)
 * `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
-* *optional* `expand_env_vars` - flag to specify whether the plugin should expand environment variables on values declared in `vars` (defaults to `false`)
+* *optional* `expand_env_vars` - expand environment variables for values in `vars` for reference (defaults to `false`)
 
 ### Debugging parameters
 
@@ -80,6 +80,19 @@ These variables are always available to reference in any manifest, and cannot be
 	"zone": "us-east1-a"
 }
 ---END VARIABLES AVAILABLE FOR ALL TEMPLATES---
+```
+
+## Expanding environment variables
+
+It may be desired to reference an environment variable for use in the Kubernetes manifest.
+In order to do so in `vars`, the `expand_env_vars` must be set to `true`.
+
+For example when using `drone deploy org/repo 5 production -p IMAGE_VERSION=1.0`, to get `IMAGE_VERSION` in `vars`:
+
+```yml
+expand_env_vars: true
+vars:
+  image: my-image:${IMAGE_VERSION}
 ```
 
 ## Example reference usage
