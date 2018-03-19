@@ -15,7 +15,7 @@ The following parameters are used to configure this plugin:
 * *optional* `secret_template` - Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template (defaults to `.kube.sec.yml`)
 * *optional* `wait_deployments` - list of Deployments to wait for successful rollout, using `kubectl rollout status`
 * *optional* `wait_seconds` - if `wait_deployments` is set, number of seconds to wait before failing the build
-* `vars` - variables to use in `template` and `secret_template`
+* `vars` - variables to use in `template` and `secret_template` (see [below](#available-vars) for details)
 * `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
 * *optional* `expand_env_vars` - flag to specify whether the plugin should expand environment variables on values declared in `vars` (defaults to `false`)
 
@@ -62,6 +62,25 @@ drone secret add \
 `drone-gke` also supports creating Kubernetes secrets for you. These secrets should be passed from Drone secrets to the plugin as environment variables with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template` in their environment variable form (uppercased).
 
 Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
+
+## Available vars
+
+These variables are always available to reference in any manifest, and cannot be overwritten by `vars` or `secrets`:
+
+```
+---START VARIABLES AVAILABLE FOR ALL TEMPLATES---
+{
+	"BRANCH": "master",
+	"BUILD_NUMBER": "12",
+	"COMMIT": "4923x0c3380413ec9288e3c0bfbf534b0f18fed1",
+	"TAG": "",
+	"cluster": "my-gke-cluster",
+	"namespace": "",
+	"project": "my-gcp-proj",
+	"zone": "us-east1-a"
+}
+---END VARIABLES AVAILABLE FOR ALL TEMPLATES---
+```
 
 ## Example reference usage
 
