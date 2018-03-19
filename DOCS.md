@@ -17,7 +17,7 @@ The following parameters are used to configure this plugin:
 * *optional* `wait_seconds` - if `wait_deployments` is set, number of seconds to wait before failing the build
 * `vars` - variables to use in `template` and `secret_template`
 * `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
-* *optional* `expand_env_vars` - flag to specify whether the plugin should expand environment variables on values declared in `vars`
+* *optional* `expand_env_vars` - flag to specify whether the plugin should expand environment variables on values declared in `vars` (defaults to `false`)
 
 ### Debugging parameters
 
