@@ -92,7 +92,7 @@ For example when using `drone deploy org/repo 5 production -p IMAGE_VERSION=1.0`
 ```yml
 expand_env_vars: true
 vars:
-  image: my-image:${IMAGE_VERSION}
+  image: my-image:$${IMAGE_VERSION}
 ```
 
 ## Example reference usage
