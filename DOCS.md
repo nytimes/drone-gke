@@ -95,6 +95,14 @@ vars:
   image: my-image:$${IMAGE_VERSION}
 ```
 
+The plugin will [expand the environment variable][expand] for the template variable.
+
+To use `$${IMAGE_VERSION}` or `$IMAGE_VERSION`, see the [Drone docs][environment] about preprocessing.
+`${IMAGE_VERSION}` will be preprocessed to an empty string.
+
+[expand]: https://golang.org/pkg/os/#ExpandEnv
+[environment]: http://docs.drone.io/environment/
+
 ## Example reference usage
 
 ### `.drone.yml`
