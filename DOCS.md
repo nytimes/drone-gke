@@ -137,6 +137,8 @@ pipeline:
     zone: us-central1-a
     cluster: my-gke-cluster
     namespace: ${DRONE_BRANCH}
+    environment:
+      - USER=root
     expand_env_vars: true
     vars:
       image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
