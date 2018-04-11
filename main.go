@@ -78,12 +78,12 @@ func wrapMain() error {
 		},
 		cli.StringFlag{
 			Name:   "token",
-			Usage:  "service account's JSON credentials",
-			EnvVar: "TOKEN",
+			Usage:  "GCP service account JSON credentials",
+			EnvVar: "GOOGLE_CREDENTIALS,TOKEN",
 		},
 		cli.StringFlag{
 			Name:   "project",
-			Usage:  "GCP project name",
+			Usage:  "GCP project name, if not inferred from credentials",
 			EnvVar: "PLUGIN_PROJECT",
 		},
 		cli.StringFlag{
@@ -263,7 +263,7 @@ func run(c *cli.Context) error {
 // checkParams checks required params
 func checkParams(c *cli.Context) error {
 	if c.String("token") == "" {
-		return fmt.Errorf("Missing required param: token")
+		return fmt.Errorf("Missing required param: google_credentials")
 	}
 
 	if c.String("zone") == "" {
