@@ -15,9 +15,9 @@ The following parameters are used to configure this plugin:
 * *optional* `secret_template` - Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template (defaults to `.kube.sec.yml`)
 * *optional* `wait_deployments` - list of Deployments to wait for successful rollout, using `kubectl rollout status`
 * *optional* `wait_seconds` - if `wait_deployments` is set, number of seconds to wait before failing the build
-* `vars` - variables to use in `template` and `secret_template`
+* `vars` - variables to use in `template` and `secret_template` (see [below](#available-vars) for details)
 * `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
-* *optional* `expand_env_vars` - flag to specify whether the plugin should expand environment variables on values declared in `vars`
+* *optional* `expand_env_vars` - expand environment variables for values in `vars` for reference (defaults to `false`)
 
 ### Debugging parameters
 
@@ -63,6 +63,46 @@ drone secret add \
 
 Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. If you pass in a secret that is already base64 encoded, please apply the prefix `secret_base64_` and the plugin will not re-encode them.
 
+## Available vars
+
+These variables are always available to reference in any manifest, and cannot be overwritten by `vars` or `secrets`:
+
+```
+---START VARIABLES AVAILABLE FOR ALL TEMPLATES---
+{
+	"BRANCH": "master",
+	"BUILD_NUMBER": "12",
+	"COMMIT": "4923x0c3380413ec9288e3c0bfbf534b0f18fed1",
+	"TAG": "",
+	"cluster": "my-gke-cluster",
+	"namespace": "",
+	"project": "my-gcp-proj",
+	"zone": "us-east1-a"
+}
+---END VARIABLES AVAILABLE FOR ALL TEMPLATES---
+```
+
+## Expanding environment variables
+
+It may be desired to reference an environment variable for use in the Kubernetes manifest.
+In order to do so in `vars`, the `expand_env_vars` must be set to `true`.
+
+For example when using `drone deploy org/repo 5 production -p IMAGE_VERSION=1.0`, to get `IMAGE_VERSION` in `vars`:
+
+```yml
+expand_env_vars: true
+vars:
+  image: my-image:$${IMAGE_VERSION}
+```
+
+The plugin will [expand the environment variable][expand] for the template variable.
+
+To use `$${IMAGE_VERSION}` or `$IMAGE_VERSION`, see the [Drone docs][environment] about preprocessing.
+`${IMAGE_VERSION}` will be preprocessed to an empty string.
+
+[expand]: https://golang.org/pkg/os/#ExpandEnv
+[environment]: http://docs.drone.io/environment/
+
 ## Example reference usage
 
 ### `.drone.yml`
@@ -105,6 +145,8 @@ pipeline:
     zone: us-central1-a
     cluster: my-gke-cluster
     namespace: ${DRONE_BRANCH}
+    environment:
+      - USER=root
     expand_env_vars: true
     vars:
       image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
