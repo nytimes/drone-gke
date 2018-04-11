@@ -205,7 +205,7 @@ func run(c *cli.Context) error {
 	defer func() {
 		err := os.Remove(keyPath)
 		if err != nil {
-			log("Warning: error removing token file: %s\n", err)
+			log("Warning: error removing credentials file: %s\n", err)
 		}
 	}()
 
@@ -349,7 +349,7 @@ func fetchCredentials(c *cli.Context, project string, runner Runner) error {
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
 	if err != nil {
-		return fmt.Errorf("Error writing token file: %s\n", err)
+		return fmt.Errorf("Error writing credentials file: %s\n", err)
 	}
 
 	err = runner.Run(gcloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
