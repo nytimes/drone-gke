@@ -144,13 +144,13 @@ func wrapMain() error {
 			EnvVar: "DRONE_TAG",
 		},
 		cli.StringSliceFlag{
-			Name:   "wait_deployments",
-			Usage:  "List of Deployments to wait for successful rollout, using kubectl rollout status",
+			Name:   "wait-deployments",
+			Usage:  "list of Deployments to wait for successful rollout, using kubectl rollout status",
 			EnvVar: "PLUGIN_WAIT_DEPLOYMENTS",
 		},
 		cli.IntFlag{
-			Name:   "wait_seconds",
-			Usage:  "If wait_deployments is set, number of seconds to wait before failing the build",
+			Name:   "wait-seconds",
+			Usage:  "if wait_deployments is set, number of seconds to wait before failing the build",
 			EnvVar: "PLUGIN_WAIT_SECONDS",
 			Value:  0,
 		},
