@@ -76,7 +76,7 @@ $ docker run --rm \
   -e PLUGIN_ZONE="$ZONE" \
   -e PLUGIN_NAMESPACE=drone-gke \
   -e PLUGIN_VARS="$(cat vars.json)" \
-  -e TOKEN="$(cat $GOOGLE_APPLICATION_CREDENTIALS)" \
+  -e GOOGLE_CREDENTIALS="$(cat $GOOGLE_APPLICATION_CREDENTIALS)" \
   -e SECRET_API_TOKEN=123 \
   -e SECRET_BASE64_P12_CERT="cDEyCg==" \
   -v $(pwd):$(pwd) \

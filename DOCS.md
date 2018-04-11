@@ -7,7 +7,7 @@ Use this plugin to deploy Docker images to [Google Container Engine (GKE)][gke].
 The following parameters are used to configure this plugin:
 
 * `image` - this plugin's Docker image
-* *optional* `project` - project of the container cluster (defaults to inferring from the service account `token` credential)
+* *optional* `project` - project of the container cluster (defaults to inferring from the service account credential)
 * `zone` - zone of the container cluster
 * `cluster` - name of the container cluster
 * *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
@@ -30,13 +30,13 @@ These optional parameters are useful for debugging:
 
 `drone-gke` requires a Google service account and uses it's [JSON credential file][service-account] to authenticate.
 
-This must be passed to the plugin under the target `token`.
+This must be passed to the plugin under the target `google_credentials`.
 
-The plugin infers the GCP project from the JSON credentials (`token`) and retrieves the GKE cluster credentials.
+The plugin infers the GCP project from the JSON credentials and retrieves the GKE cluster credentials.
 
 [service-account]: https://cloud.google.com/storage/docs/authentication#service_accounts
 
-### Setting the JSON token
+### Setting the JSON credential
 
 Improved in Drone 0.5+, it is no longer necessary to align the JSON file.
 
@@ -155,7 +155,7 @@ pipeline:
       user: $${USER}
     secrets:
       - source: GOOGLE_CREDENTIALS
-        target: token
+        target: google_credentials
       - source: API_TOKEN
         target: secret_api_token
       - source: P12_CERT
