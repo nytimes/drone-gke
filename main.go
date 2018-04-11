@@ -78,12 +78,12 @@ func wrapMain() error {
 		},
 		cli.StringFlag{
 			Name:   "token",
-			Usage:  "service account's JSON credentials",
-			EnvVar: "TOKEN",
+			Usage:  "GCP service account JSON credentials",
+			EnvVar: "GOOGLE_CREDENTIALS,TOKEN",
 		},
 		cli.StringFlag{
 			Name:   "project",
-			Usage:  "GCP project name",
+			Usage:  "GCP project name, if not inferred from credentials",
 			EnvVar: "PLUGIN_PROJECT",
 		},
 		cli.StringFlag{
@@ -205,7 +205,7 @@ func run(c *cli.Context) error {
 	defer func() {
 		err := os.Remove(keyPath)
 		if err != nil {
-			log("Warning: error removing token file: %s\n", err)
+			log("Warning: error removing credentials file: %s\n", err)
 		}
 	}()
 
@@ -263,7 +263,7 @@ func run(c *cli.Context) error {
 // checkParams checks required params
 func checkParams(c *cli.Context) error {
 	if c.String("token") == "" {
-		return fmt.Errorf("Missing required param: token")
+		return fmt.Errorf("Missing required param: google_credentials")
 	}
 
 	if c.String("zone") == "" {
@@ -349,7 +349,7 @@ func fetchCredentials(c *cli.Context, project string, runner Runner) error {
 	// This is inside the ephemeral plugin container, not on the host.
 	err := ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
 	if err != nil {
-		return fmt.Errorf("Error writing token file: %s\n", err)
+		return fmt.Errorf("Error writing credentials file: %s\n", err)
 	}
 
 	err = runner.Run(gcloudCmd, "auth", "activate-service-account", "--key-file", keyPath)
