@@ -23,6 +23,8 @@ type token struct {
 }
 
 var (
+	// Version is set at compile time.
+	version string
 	// Build revision is set at compile time.
 	rev string
 )
@@ -54,6 +56,10 @@ func main() {
 }
 
 func wrapMain() error {
+	if version == "" {
+		version = "x.x.x"
+	}
+
 	if rev == "" {
 		rev = "[unknown]"
 	}
@@ -64,7 +70,7 @@ func wrapMain() error {
 	app.Name = "gke plugin"
 	app.Usage = "gke plugin"
 	app.Action = run
-	app.Version = fmt.Sprintf("1.0.0-%s", rev)
+	app.Version = fmt.Sprintf("%s-%s", version, rev)
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:   "dry-run",

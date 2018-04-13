@@ -8,7 +8,7 @@ build_config: &config
   environment:
     - CGO_ENABLED=0
   commands:
-    - go build -a -ldflags "-X main.rev=${DRONE_COMMIT}"
+    - go build -a -ldflags "-X main.version=${DRONE_TAG:-0.8} -X main.rev=${DRONE_COMMIT}"
 
 pipeline:
   test:
