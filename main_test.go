@@ -398,7 +398,7 @@ func TestApplyManifests(t *testing.T) {
 func TestWaitForRollout(t *testing.T) {
 	// No error
 	set := flag.NewFlagSet("test-set", 0)
-	set.Int("wait_seconds", 256, "")
+	set.Int("wait-seconds", 256, "")
 	set.String("namespace", "test-ns", "")
 	c := cli.NewContext(nil, set, nil)
 
