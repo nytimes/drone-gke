@@ -156,7 +156,7 @@ func wrapMain() error {
 		},
 		cli.IntFlag{
 			Name:   "wait-seconds",
-			Usage:  "if wait_deployments is set, number of seconds to wait before failing the build",
+			Usage:  "if wait-deployments is set, number of seconds to wait before failing the build",
 			EnvVar: "PLUGIN_WAIT_SECONDS",
 			Value:  0,
 		},
@@ -571,11 +571,11 @@ func waitForRollout(c *cli.Context, runner Runner, waitDeployments []string) err
 	// waitDeployments parameter overrides the one in cli.Context
 	// temporary for testing
 	if len(waitDeployments) == 0 {
-		waitDeployments = c.StringSlice("wait_deployments")
+		waitDeployments = c.StringSlice("wait-deployments")
 	}
 
 	namespace := c.String("namespace")
-	waitSeconds := c.Int("wait_seconds")
+	waitSeconds := c.Int("wait-seconds")
 	waitDeploymentsCount := len(waitDeployments)
 	counterProgress := ""
 
