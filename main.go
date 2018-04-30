@@ -256,7 +256,7 @@ func run(c *cli.Context) error {
 		// Print last line of error of applying secret manifest to stderr
 		// Disable it for now as it might still leak secrets
 		// printTrimmedError(&secretStderr, os.Stderr)
-		return fmt.Errorf("Error (output redacted): %s\n", err)
+		return fmt.Errorf("Error (kubectl output redacted): %s\n", err)
 	}
 
 	// Wait for rollout to finish
