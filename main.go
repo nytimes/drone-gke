@@ -254,8 +254,9 @@ func run(c *cli.Context) error {
 	runnerSecret := NewBasicRunner("", environ, os.Stdout, &secretStderr)
 	if err := applyManifests(c, manifestPaths, runner, runnerSecret); err != nil {
 		// Print last line of error of applying secret manifest to stderr
-		printTrimmedError(&secretStderr, os.Stderr)
-		return fmt.Errorf("Error: %s\n", err)
+		// Disable it for now as it might still leak secrets
+		// printTrimmedError(&secretStderr, os.Stderr)
+		return fmt.Errorf("Error (kubectl output redacted): %s\n", err)
 	}
 
 	// Wait for rollout to finish
