@@ -26,8 +26,6 @@ Before submitting changes, please follow these guidelines:
 1. Open an issue to discuss a new feature.
 1. Write tests.
 1. Make sure code follows the ['Go Code Review Comments'](https://github.com/golang/go/wiki/CodeReviewComments).
-<!--1. Make sure your changes pass `make test`.-->
-<!--1. Make sure the entire test suite passes locally and on Travis CI.-->
 1. Open a Pull Request.
 
 ## License
