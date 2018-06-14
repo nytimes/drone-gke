@@ -8,7 +8,7 @@ In addition, this opens the yaml file to templatization and customization with e
 
 ## Drone Compatibility
 
-For usage in Drone 0.5 and newer, please use a release greater than `0.7`.
+For usage in Drone 0.5 and newer, please use a [release tag](https://hub.docker.com/r/nytimes/drone-gke/tags/) greater than `0.7`.
 
 For usage in Drone 0.4, please use the `nytimes/drone-gke:0.4` tag.
 
@@ -35,7 +35,10 @@ go build
 ## Testing
 
 **This could use your contribution!**
-Help us create a runnable test suite.
+
+```bash
+go test
+```
 
 ## Docker
 
