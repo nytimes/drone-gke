@@ -52,8 +52,8 @@ Using it in a `.drone.yml` pipeline: please take a look at [the docs](DOCS.md).
 Executing locally from the working directory:
 
 ```
-# Deploy the manifest templates in example/
-$ cd example/
+# Deploy the manifest templates in local-example/
+$ cd local-example/
 
 # Set to the path of your GCP service account JSON file
 $ export GOOGLE_APPLICATION_CREDENTIALS=xxx
