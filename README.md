@@ -47,6 +47,8 @@ OWNER=your-docker-hub-user ./bin/dist
 
 ## Usage
 
+Using it in a `.drone.yml` pipeline: please take a look at [the docs](DOCS.md).
+
 Executing locally from the working directory:
 
 ```
