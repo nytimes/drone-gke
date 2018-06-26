@@ -3,12 +3,7 @@ workspace:
   base: /go
   path: src/github.com/NYTimes/drone-gke
 
-build_config: &config
-  image: golang:1.8
-  environment:
-    - CGO_ENABLED=0
-  commands:
-    - go build -a -ldflags "-X main.rev=${DRONE_COMMIT}"
+branches: "0.4.x"
 
 pipeline:
   test:
@@ -18,70 +13,27 @@ pipeline:
     commands:
       - go vet
       - go test -cover -coverprofile=coverage.out
-
+      
   build:
-    <<: *config
-    when:
-      branch:
-        - develop
-        - master
+    image: golang:1.8
+    environment:
+      - CGO_ENABLED=0
+    commands:
+      - go build -a -ldflags "-X main.rev=${DRONE_COMMIT}"
 
-  build_release:
-    <<: *config
-    when:
-      event: tag
-
-  publish_develop:
+  publish:
     image: plugins/docker
     repo: nytimes/drone-gke
     tag:
-      - "develop"
-    secrets:
-      - docker_username
-      - docker_password
-    when:
-      event: push
-      branch: develop
-
-  publish_latest:
-    image: plugins/docker
-    repo: nytimes/drone-gke
-    tag:
-      - "latest"
       - "0.4"
     secrets:
       - docker_username
       - docker_password
     when:
       event: push
-      branch: master
-
-  publish_release:
-    image: plugins/docker
-    repo: nytimes/drone-gke
-    tag:
-      - "${DRONE_TAG}"
-    secrets:
-      - docker_username
-      - docker_password
-    when:
-      event: tag
 
   slack:
     image: plugins/slack
     channel: dv-notifications
     secrets:
       - slack_webhook
-    when:
-      branch:
-        - develop
-        - master
-
-  slack_tag:
-    image: plugins/slack
-    channel: dv-notifications
-    secrets:
-      - slack_webhook
-    when:
-      event:
-        - tag
