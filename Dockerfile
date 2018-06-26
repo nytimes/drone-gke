@@ -1,5 +1,5 @@
-# kubectl 1.8.4
-FROM google/cloud-sdk:183.0.0-alpine
+# kubectl 1.9.7
+FROM google/cloud-sdk:203.0.0-alpine
 
 # Install kubectl
 RUN gcloud components install kubectl && \
