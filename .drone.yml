@@ -3,16 +3,23 @@ workspace:
   base: /go
   path: src/github.com/NYTimes/drone-gke
 
-build_config: &config
-  image: golang:1.9
+build_config: &build_config
+  image: golang:1.10
   environment:
     - CGO_ENABLED=0
   commands:
     - go build -a -ldflags "-X main.version=${DRONE_TAG:-0.8} -X main.rev=${DRONE_COMMIT}"
 
+publish_config: &publish_config
+  image: plugins/docker
+  repo: nytimes/drone-gke
+  secrets:
+    - docker_username
+    - docker_password
+
 pipeline:
   test:
-    image: golang:1.9
+    image: golang:1.10
     environment:
       - CGO_ENABLED=0
     commands:
@@ -20,52 +27,40 @@ pipeline:
       - go test -cover
 
   build:
-    <<: *config
+    <<: *build_config
     when:
       branch:
         - develop
         - master
 
   build_release:
-    <<: *config
+    <<: *build_config
     when:
       event: tag
 
   publish_develop:
-    image: plugins/docker
-    repo: nytimes/drone-gke
+    <<: *publish_config
     tag:
       - "develop"
-    secrets:
-      - docker_username
-      - docker_password
     when:
       event: push
       branch: develop
 
   publish_latest:
-    image: plugins/docker
-    repo: nytimes/drone-gke
-    tag:
-      - "latest"
-      - "0.8"
-    secrets:
-      - docker_username
-      - docker_password
-    when:
-      event: push
-      branch: master
+    <<: *publish_config
+    auto_tag: true
 
-  publish_release:
-    image: plugins/docker
-    repo: nytimes/drone-gke
-    tag:
-      - "${DRONE_TAG}"
-    secrets:
-      - docker_username
-      - docker_password
-    when:
-      event: tag
+  publish_1_8:
+    <<: *publish_config
+    auto_tag: true
+    auto_tag_suffix: "1.8"
+    dockerfile: Dockerfile.1.8
+
+  publish_1_9:
+    <<: *publish_config
+    auto_tag: true
+    auto_tag_suffix: "1.9"
+    dockerfile: Dockerfile.1.9
 
   slack:
     image: plugins/slack
