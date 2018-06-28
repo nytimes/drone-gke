@@ -6,21 +6,26 @@ For the usage information and a listing of the available options please take a l
 This is a little simpler than deploying straight to Kubernetes, because the API endpoints and credentials can be derived using the Google credentials.
 In addition, this opens the yaml file to templatization and customization with each Drone build.
 
-## Drone Compatibility
+## Drone compatibility
 
-For usage in Drone 0.5 and newer, please use a [release tag](https://hub.docker.com/r/nytimes/drone-gke/tags/) greater than `0.7`.
+For usage in Drone 0.5 and newer, please use a [release tag](https://hub.docker.com/r/nytimes/drone-gke/tags/) >= `0.7`.
 
-For usage in Drone 0.4, please use the `nytimes/drone-gke:0.4` tag.
+For usage in Drone 0.4, please use a `0.4` [release tag](https://hub.docker.com/r/nytimes/drone-gke/tags/).
 
 ## Releases
 
 Users should use the `x.X` releases for stable use cases (eg 0.8).
 
-Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be documented in the changelog.
+Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be documented in the release notes.
 
 - Pushes to the [`develop`](https://github.com/NYTimes/drone-gke/tree/develop) branch will update the Docker Hub release tagged `develop`.
-- Pushes to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will update the Docker Hub release tagged `latest` and `x.X` (eg 0.7).
-- Tags to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will create the Docker Hub release with the tag value (eg 0.7.1).
+- Pushes to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will update the Docker Hub release tagged `latest`.
+- Tags to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will create the Docker Hub release with the tag value (eg `0.7.1` and `0.7`).
+
+## kubectl version
+
+Use the [release tag](https://hub.docker.com/r/nytimes/drone-gke/tags/) suffix with the desired `kubectl` version.
+The last three minor releases are supported ([same as GKE](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades)).
 
 ## Development
 
