@@ -8,7 +8,8 @@ The following parameters are used to configure this plugin:
 
 * `image` - this plugin's Docker image
 * *optional* `project` - project of the container cluster (defaults to inferring from the service account `token` credential)
-* `zone` - zone of the container cluster
+* *optional* `zone` - zone of the container cluster
+* *optional* `region` - region of the container cluster
 * `cluster` - name of the container cluster
 * *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
 * *optional* `template` - Kubernetes manifest template (defaults to `.kube.yml`)
@@ -26,7 +27,7 @@ These optional parameters are useful for debugging:
 * `dry_run` - do not apply the Kubernetes templates (defaults to `false`)
 * `verbose` - dump available `vars` and the generated Kubernetes `template` (excluding secrets) (defaults to `false`)
 
-## Credentials
+## Service Account Credentials
 
 `drone-gke` requires a Google service account and uses its [JSON credential file][service-account] to authenticate.
 
@@ -56,6 +57,16 @@ drone secret add \
   --name GOOGLE_CREDENTIALS \
   --value @gcp-project-name-key-id.json
 ```
+
+## Cluster Credentials
+
+The plugin attempts to fetch credentials for authenticating to the cluster via `kubectl`.
+
+If connecting to a [regional cluster](https://cloud.google.com/kubernetes-engine/docs/concepts/multi-zone-and-regional-clusters#regional), you must provide the `region` parameter to the plugin and omit the `zone` parameter.
+
+If connecting to a [zonal cluster](https://cloud.google.com/kubernetes-engine/docs/concepts/multi-zone-and-regional-clusters#multi-zone), you must provide the `zone` parameter to the plugin and omit the `region` parameter.
+
+The `zone` and `region` parameters are mutually exclusive; providing both to the plugin for the same execution will result in an error.
 
 ## Secrets
 
