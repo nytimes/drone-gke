@@ -9,7 +9,8 @@ The project is inferred from the JSON credentials.
 The following parameters are used to configure this plugin:
 
 * `image` - this plugin's Docker image
-* `zone` - zone of the container cluster
+* *optional* `zone` - zone of the container cluster
+* *optional* `region` - region of the container cluster
 * `cluster` - name of the container cluster
 * `namespace` - Kubernetes namespace to operate in
 * `token` - service account's JSON credentials
