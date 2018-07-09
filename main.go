@@ -23,6 +23,7 @@ type GKE struct {
 	KubectlCmd     string                 `json:"kubectl_cmd"`
 	Project        string                 `json:"project"`
 	Zone           string                 `json:"zone"`
+	Region         string                 `json:"region"`
 	Cluster        string                 `json:"cluster"`
 	Namespace      string                 `json:"namespace"`
 	Template       string                 `json:"template"`
@@ -91,8 +92,12 @@ func wrapMain() error {
 		return fmt.Errorf("Missing required param: project")
 	}
 
-	if vargs.Zone == "" {
-		return fmt.Errorf("Missing required param: zone")
+	if vargs.Zone == "" && vargs.Region == "" {
+		return fmt.Errorf("Missing required param: at least one of region or zone must be specified")
+	}
+
+	if vargs.Zone != "" && vargs.Region != "" {
+		return fmt.Errorf("Invalid params: at most one of region or zone may be specified")
 	}
 
 	sdkPath := "/google-cloud-sdk"
@@ -144,7 +149,24 @@ func wrapMain() error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	err = runner.Run(vargs.GCloudCmd, "container", "clusters", "get-credentials", vargs.Cluster, "--project", vargs.Project, "--zone", vargs.Zone)
+	getCredentialsArgs := []string{
+		"container",
+		"clusters",
+		"get-credentials", vargs.Cluster,
+		"--project", vargs.Project,
+	}
+
+	// build --zone / --region arguments based on parameters provided to plugin
+	// earlier validation logic requires at least one of zone or region to be provided and prevents use of both at the same time
+	if vargs.Zone != "" {
+		getCredentialsArgs = append(getCredentialsArgs, "--zone", vargs.Zone)
+	}
+
+	if vargs.Region != "" {
+		getCredentialsArgs = append(getCredentialsArgs, "--region", vargs.Region)
+	}
+
+	err = runner.Run(vargs.GCloudCmd, getCredentialsArgs...)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
