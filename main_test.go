@@ -32,14 +32,43 @@ func TestCheckParams(t *testing.T) {
 	// https://github.com/urfave/cli/blob/master/context_test.go#L10
 
 	// No args set
-	set := flag.NewFlagSet("test-set", 0)
+	set := flag.NewFlagSet("empty-set", 0)
 	c := cli.NewContext(nil, set, nil)
 	err := checkParams(c)
 	assert.Error(t, err)
 
 	// Required args set
+	set = flag.NewFlagSet("missing-zone-region", 0)
+	c = cli.NewContext(nil, set, nil)
 	set.String("token", "{}", "")
-	set.String("zone", "us-east1", "")
+	set.String("cluster", "cluster-0", "")
+	err = checkParams(c)
+	assert.Error(t, err)
+
+	// Mutually-exclusive args set
+	set = flag.NewFlagSet("both-zone-region", 0)
+	c = cli.NewContext(nil, set, nil)
+	set.String("token", "{}", "")
+	set.String("zone", "us-east1-b", "")
+	set.String("region", "us-east1", "")
+	set.String("cluster", "cluster-0", "")
+	err = checkParams(c)
+	assert.Error(t, err)
+
+	// Zonal args set
+	set = flag.NewFlagSet("zonal-set", 0)
+	c = cli.NewContext(nil, set, nil)
+	set.String("token", "{}", "")
+	set.String("zone", "us-east1-b", "")
+	set.String("cluster", "cluster-0", "")
+	err = checkParams(c)
+	assert.NoError(t, err)
+
+	// Regional args set
+	set = flag.NewFlagSet("regional-set", 0)
+	c = cli.NewContext(nil, set, nil)
+	set.String("token", "{}", "")
+	set.String("region", "us-west1", "")
 	set.String("cluster", "cluster-0", "")
 	err = checkParams(c)
 	assert.NoError(t, err)
@@ -110,19 +139,28 @@ func TestParseSecrets(t *testing.T) {
 
 func TestFetchCredentials(t *testing.T) {
 	// Set cli.Context
-	set := flag.NewFlagSet("test-set", 0)
-	set.String("token", "{\"key\", \"val\"}", "")
-	set.String("cluster", "cluster-0", "")
-	set.String("zone", "us-east1", "")
-	c := cli.NewContext(nil, set, nil)
+	zonal := flag.NewFlagSet("zonal-set", 0)
+	zonal.String("token", "{\"key\", \"val\"}", "")
+	zonal.String("cluster", "cluster-0", "")
+	zonal.String("zone", "us-east1-b", "")
+	zonalContext := cli.NewContext(nil, zonal, nil)
+
+	regional := flag.NewFlagSet("regional-set", 0)
+	regional.String("token", "{\"key\", \"val\"}", "")
+	regional.String("cluster", "cluster-0", "")
+	regional.String("region", "us-west1", "")
+	regionalContext := cli.NewContext(nil, regional, nil)
 
 	// No error
 	testRunner := new(MockedRunner)
 	testRunner.On("Run", []string{"gcloud", "auth", "activate-service-account", "--key-file", "/tmp/gcloud.json"}).Return(nil)
-	testRunner.On("Run", []string{"gcloud", "container", "clusters", "get-credentials", "cluster-0", "--project", "test-project", "--zone", "us-east1"}).Return(nil)
-	err := fetchCredentials(c, "test-project", testRunner)
+	testRunner.On("Run", []string{"gcloud", "container", "clusters", "get-credentials", "cluster-0", "--project", "test-project", "--zone", "us-east1-b"}).Return(nil)
+	testRunner.On("Run", []string{"gcloud", "container", "clusters", "get-credentials", "cluster-0", "--project", "test-project", "--region", "us-west1"}).Return(nil)
+	zonalErr := fetchCredentials(zonalContext, "test-project", testRunner)
+	regionalErr := fetchCredentials(regionalContext, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
-	assert.NoError(t, err)
+	assert.NoError(t, zonalErr)
+	assert.NoError(t, regionalErr)
 
 	// Verify token file
 	buf, err := ioutil.ReadFile("/tmp/gcloud.json")
@@ -131,7 +169,7 @@ func TestFetchCredentials(t *testing.T) {
 	// Run() error
 	testRunner = new(MockedRunner)
 	testRunner.On("Run", []string{"gcloud", "auth", "activate-service-account", "--key-file", "/tmp/gcloud.json"}).Return(fmt.Errorf("e"))
-	err = fetchCredentials(c, "test-project", testRunner)
+	err = fetchCredentials(zonalContext, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.Error(t, err)
 }
@@ -144,7 +182,7 @@ func TestTemplateData(t *testing.T) {
 	set.String("drone-commit", "e0f21b90a", "")
 	set.String("drone-tag", "v0.0.0", "")
 	set.String("cluster", "cluster-0", "")
-	set.String("zone", "us-east1", "")
+	set.String("zone", "us-east1-b", "")
 	c := cli.NewContext(nil, set, nil)
 
 	// No error
@@ -162,7 +200,7 @@ func TestTemplateData(t *testing.T) {
 		"COMMIT":       "e0f21b90a",
 		"TAG":          "v0.0.0",
 		"project":      "test-project",
-		"zone":         "us-east1",
+		"zone":         "us-east1-b",
 		"cluster":      "cluster-0",
 		"namespace":    "",
 		"key0":         "val0",
@@ -178,14 +216,14 @@ func TestTemplateData(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Variable overrides existing ones
-	vars = map[string]interface{}{"zone": "us-east4"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1", vars, secrets)
+	vars = map[string]interface{}{"zone": "us-east4-b"}
+	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 
 	// Secret overrides variable
 	vars = map[string]interface{}{"SECRET_TEST": "val0"}
 	secrets = map[string]string{"SECRET_TEST": "test_val"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1", vars, secrets)
+	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 }
 
@@ -200,7 +238,7 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 	set.String("drone-commit", "e0f21b90a", "")
 	set.String("drone-tag", "v0.0.0", "")
 	set.String("cluster", "cluster-0", "")
-	set.String("zone", "us-east1", "")
+	set.String("zone", "us-east1-b", "")
 	set.Bool("expand-env-vars", true, "")
 	c := cli.NewContext(nil, set, nil)
 
@@ -219,7 +257,7 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 		"COMMIT":       "e0f21b90a",
 		"TAG":          "v0.0.0",
 		"project":      "test-project",
-		"zone":         "us-east1",
+		"zone":         "us-east1-b",
 		"cluster":      "cluster-0",
 		"namespace":    "",
 		"key0":         "val0",
@@ -235,14 +273,14 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Variable overrides existing ones
-	vars = map[string]interface{}{"zone": "us-east4"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1", vars, secrets)
+	vars = map[string]interface{}{"zone": "us-east4-b"}
+	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 
 	// Secret overrides variable
 	vars = map[string]interface{}{"SECRET_TEST": "val0"}
 	secrets = map[string]string{"SECRET_TEST": "test_val"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1", vars, secrets)
+	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 }
 
@@ -308,14 +346,14 @@ func TestPrintKubectlVersion(t *testing.T) {
 func TestSetNamespace(t *testing.T) {
 	// No error
 	set := flag.NewFlagSet("test-set", 0)
-	set.String("zone", "us-east1", "")
+	set.String("zone", "us-east1-b", "")
 	set.String("cluster", "cluster-0", "")
 	set.String("namespace", "test-ns", "")
 	set.Bool("dry-run", false, "")
 	c := cli.NewContext(nil, set, nil)
 
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1_cluster-0", "--namespace", "test-ns"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "test-ns"}).Return(nil)
 	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/tmp/namespace.json"}).Return(nil)
 	err := setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
@@ -327,14 +365,14 @@ func TestSetNamespace(t *testing.T) {
 
 	// Dry-run
 	set = flag.NewFlagSet("test-set", 0)
-	set.String("zone", "us-east1", "")
+	set.String("zone", "us-east1-b", "")
 	set.String("cluster", "cluster-0", "")
 	set.String("namespace", "test-ns", "")
 	set.Bool("dry-run", true, "")
 	c = cli.NewContext(nil, set, nil)
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1_cluster-0", "--namespace", "test-ns"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "test-ns"}).Return(nil)
 	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run", "--filename", "/tmp/namespace.json"}).Return(nil)
 	err = setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)

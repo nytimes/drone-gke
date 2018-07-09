@@ -98,6 +98,11 @@ func wrapMain() error {
 			EnvVar: "PLUGIN_ZONE",
 		},
 		cli.StringFlag{
+			Name:   "region",
+			Usage:  "region of the container cluster",
+			EnvVar: "PLUGIN_REGION",
+		},
+		cli.StringFlag{
 			Name:   "cluster",
 			Usage:  "name of the container cluster",
 			EnvVar: "PLUGIN_CLUSTER",
@@ -273,8 +278,12 @@ func checkParams(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: token")
 	}
 
-	if c.String("zone") == "" {
-		return fmt.Errorf("Missing required param: zone")
+	if c.String("zone") == "" && c.String("region") == "" {
+		return fmt.Errorf("Missing required param: at least one of region or zone must be specified")
+	}
+
+	if c.String("zone") != "" && c.String("region") != "" {
+		return fmt.Errorf("Invalid params: at most one of region or zone may be specified")
 	}
 
 	if c.String("cluster") == "" {
@@ -364,7 +373,24 @@ func fetchCredentials(c *cli.Context, project string, runner Runner) error {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
-	err = runner.Run(gcloudCmd, "container", "clusters", "get-credentials", c.String("cluster"), "--project", project, "--zone", c.String("zone"))
+	getCredentialsArgs := []string{
+		"container",
+		"clusters",
+		"get-credentials", c.String("cluster"),
+		"--project", project,
+	}
+
+	// build --zone / --region arguments based on parameters provided to plugin
+	// checkParams requires at least one of zone or region to be provided and prevents use of both at the same time
+	if c.String("zone") != "" {
+		getCredentialsArgs = append(getCredentialsArgs, "--zone", c.String("zone"))
+	}
+
+	if c.String("region") != "" {
+		getCredentialsArgs = append(getCredentialsArgs, "--region", c.String("region"))
+	}
+
+	err = runner.Run(gcloudCmd, getCredentialsArgs...)
 	if err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
