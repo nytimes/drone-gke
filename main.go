@@ -302,7 +302,18 @@ func wrapMain() error {
 	if len(vargs.Namespace) > 0 {
 		fmt.Printf("Configuring kubectl to the %s namespace\n", vargs.Namespace)
 
-		context := strings.Join([]string{"gke", vargs.Project, vargs.Zone, vargs.Cluster}, "_")
+		// set cluster location segment based on parameters provided to plugin
+		// earlier validation logic requires at least one of zone or region to be provided and prevents use of both at the same time
+		clusterLocation := ""
+		if vargs.Zone != "" {
+			clusterLocation = vargs.Zone
+		}
+
+		if vargs.Region != "" {
+			clusterLocation = vargs.Region
+		}
+
+		context := strings.Join([]string{"gke", vargs.Project, clusterLocation, vargs.Cluster}, "_")
 
 		err = runner.Run(vargs.KubectlCmd, "config", "set-context", context, "--namespace", vargs.Namespace)
 		if err != nil {
