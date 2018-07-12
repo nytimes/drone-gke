@@ -526,7 +526,19 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 	// Set the execution namespace.
 	log("Configuring kubectl to the %s namespace\n", namespace)
 
-	context := strings.Join([]string{"gke", project, c.String("zone"), c.String("cluster")}, "_")
+	// set cluster location segment based on parameters provided to plugin
+	// checkParams requires at least one of zone or region to be provided and prevents use of both at the same time
+	clusterLocation := ""
+	if c.String("zone") != "" {
+		clusterLocation = c.String("zone")
+	}
+
+	if c.String("region") != "" {
+		clusterLocation = c.String("region")
+	}
+
+	context := strings.Join([]string{"gke", project, clusterLocation, c.String("cluster")}, "_")
+
 	if err := runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", namespace); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}

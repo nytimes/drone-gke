@@ -344,8 +344,8 @@ func TestPrintKubectlVersion(t *testing.T) {
 }
 
 func TestSetNamespace(t *testing.T) {
-	// No error
-	set := flag.NewFlagSet("test-set", 0)
+	// Zonal args set
+	set := flag.NewFlagSet("zonal-set", 0)
 	set.String("zone", "us-east1-b", "")
 	set.String("cluster", "cluster-0", "")
 	set.String("namespace", "test-ns", "")
@@ -356,6 +356,21 @@ func TestSetNamespace(t *testing.T) {
 	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "test-ns"}).Return(nil)
 	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/tmp/namespace.json"}).Return(nil)
 	err := setNamespace(c, "test-project", testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+
+	// Region args set
+	set = flag.NewFlagSet("regional-set", 0)
+	set.String("region", "us-west1", "")
+	set.String("cluster", "regional-cluster", "")
+	set.String("namespace", "test-ns", "")
+	set.Bool("dry-run", false, "")
+	c = cli.NewContext(nil, set, nil)
+
+	testRunner = new(MockedRunner)
+	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-west1_regional-cluster", "--namespace", "test-ns"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/tmp/namespace.json"}).Return(nil)
+	err = setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
 
