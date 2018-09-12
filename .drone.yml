@@ -53,13 +53,13 @@ pipeline:
   publish_1_8:
     <<: *publish_config
     auto_tag: true
-    auto_tag_suffix: "1.8"
+    auto_tag_suffix: "k8s-1.8"
     dockerfile: Dockerfile.1.8
 
   publish_1_9:
     <<: *publish_config
     auto_tag: true
-    auto_tag_suffix: "1.9"
+    auto_tag_suffix: "k8s-1.9"
     dockerfile: Dockerfile.1.9
 
   slack:
