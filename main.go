@@ -183,6 +183,7 @@ func run(c *cli.Context) error {
 	// Use project if explicitly stated, otherwise infer from the service account token.
 	project := c.String("project")
 	if project == "" {
+		log("Parsing Project ID from credentials\n")
 		project = getProjectFromToken(c.String("token"))
 		if project == "" {
 			return fmt.Errorf("Missing required param: project")
