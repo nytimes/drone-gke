@@ -136,17 +136,12 @@ pipeline:
       event:
         - push
         - pull_request
-
   gcr:
-    image: plugins/docker
-    storage_driver: overlay
-    username: _json_key
+    image: plugins/gcr
     registry: us.gcr.io
     repo: us.gcr.io/my-gke-project/my-app
     tag: ${DRONE_COMMIT}
-    secrets:
-      - source: GOOGLE_CREDENTIALS
-        target: docker_password
+    secrets: [google_credentials]
     when:
       event: push
       branch: master
