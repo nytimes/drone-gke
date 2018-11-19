@@ -528,7 +528,7 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 
 	//replace invalid char in namespace
 	namespace = strings.ToLower(namespace)
-	namespace = invalidNameRegex.ReplaceAllString(namespace, "")
+	namespace = invalidNameRegex.ReplaceAllString(namespace, "-")
 	
 	// Set the execution namespace.
 	log("Configuring kubectl to the %s namespace\n", namespace)
