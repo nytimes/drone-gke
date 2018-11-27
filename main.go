@@ -47,7 +47,7 @@ kind: Namespace
 metadata:
   name: %s
 `
-var invalidNameRegex = regexp.MustCompile(`[^a-z\.\-]+`)
+var invalidNameRegex = regexp.MustCompile(`[^a-z0-9\.\-]+`)
 
 func main() {
 	err := wrapMain()
