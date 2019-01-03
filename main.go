@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -46,6 +47,7 @@ kind: Namespace
 metadata:
   name: %s
 `
+var invalidNameRegex = regexp.MustCompile(`[^a-z0-9\.\-]+`)
 
 func main() {
 	err := wrapMain()
@@ -524,6 +526,10 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 		return nil
 	}
 
+	//replace invalid char in namespace
+	namespace = strings.ToLower(namespace)
+	namespace = invalidNameRegex.ReplaceAllString(namespace, "-")
+	
 	// Set the execution namespace.
 	log("Configuring kubectl to the %s namespace\n", namespace)
 
