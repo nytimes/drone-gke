@@ -1,4 +1,5 @@
 # latest kubectl in the SDK
+# https://cloud.google.com/sdk/docs/release-notes
 FROM google/cloud-sdk:alpine
 
 # Install kubectl
