@@ -4,11 +4,11 @@ workspace:
   path: src/github.com/NYTimes/drone-gke
 
 build_config: &build_config
-  image: golang:1.10
+  image: golang:1
   environment:
     - CGO_ENABLED=0
   commands:
-    - go build -a -ldflags "-X main.version=${DRONE_TAG:-0.8} -X main.rev=${DRONE_COMMIT}"
+    - go build -a -ldflags "-X main.version=${DRONE_TAG:-other} -X main.rev=${DRONE_COMMIT}"
 
 publish_config: &publish_config
   image: plugins/docker
@@ -19,7 +19,7 @@ publish_config: &publish_config
 
 pipeline:
   test:
-    image: golang:1.10
+    image: golang:1
     environment:
       - CGO_ENABLED=0
     commands:
@@ -50,17 +50,17 @@ pipeline:
     <<: *publish_config
     auto_tag: true
 
-  publish_1_8:
+  publish_1_10:
     <<: *publish_config
     auto_tag: true
-    auto_tag_suffix: "k8s-1.8"
-    dockerfile: Dockerfile.1.8
+    auto_tag_suffix: "k8s-1.10"
+    dockerfile: Dockerfile.1.10
 
-  publish_1_9:
+  publish_1_11:
     <<: *publish_config
     auto_tag: true
-    auto_tag_suffix: "k8s-1.9"
-    dockerfile: Dockerfile.1.9
+    auto_tag_suffix: "k8s-1.11"
+    dockerfile: Dockerfile.1.11
 
   slack:
     image: plugins/slack
