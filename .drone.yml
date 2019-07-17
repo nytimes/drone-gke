@@ -1,7 +1,7 @@
 ---
 workspace:
   base: /go
-  path: src/github.com/NYTimes/drone-gke
+  path: src/github.com/nytimes/drone-gke
 
 build_config: &build_config
   image: golang:1
