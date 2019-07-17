@@ -1,4 +1,4 @@
-repo: NYTimes/drone-gke
+repo: nytimes/drone-gke
 labels:
   - name: effort/xs
     color: d4c5f9

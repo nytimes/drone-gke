@@ -21,9 +21,9 @@ Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be 
 Use the release [tag](https://hub.docker.com/r/nytimes/drone-gke/tags/) suffixed with your desired `kubectl` version.
 The last two-three minor releases are supported ([same as GKE](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades)).
 
-- Pushes to the [`develop`](https://github.com/NYTimes/drone-gke/tree/develop) branch will update the image tagged `develop`.
-- Pushes to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will update the images tagged `latest` and corresponding `kubectl` versions.
-- Tags to the [`master`](https://github.com/NYTimes/drone-gke/tree/master) branch will create the images with the tag value (eg `0.7.1` and `0.7`) and corresponding `kubectl` versions.
+- Pushes to the [`develop`](https://github.com/nytimes/drone-gke/tree/develop) branch will update the image tagged `develop`.
+- Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the images tagged `latest` and corresponding `kubectl` versions.
+- Tags to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will create the images with the tag value (eg `0.7.1` and `0.7`) and corresponding `kubectl` versions.
 
 ## Development
 
