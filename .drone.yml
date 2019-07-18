@@ -23,6 +23,7 @@ pipeline:
     environment:
       - CGO_ENABLED=0
     commands:
+      - go get
       - go vet
       - go test -cover
 
