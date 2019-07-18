@@ -14,12 +14,17 @@ Derive the API endpoints and credentials from the Google credentials and open th
 
 ## Releases and versioning
 
-Users should use the `x.X` releases for stable use cases (eg 0.8).
+### Tool
 
+Use the `x.X` releases for stable use cases (eg 0.8).
 Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be documented in the [release notes](https://github.com/nytimes/drone-gke/releases).
+
+### Kubernetes API
 
 Use the release [tag](https://hub.docker.com/r/nytimes/drone-gke/tags/) suffixed with your desired `kubectl` version.
 The last two-three minor releases are supported ([same as GKE](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades)).
+
+### Container
 
 - Pushes to the [`develop`](https://github.com/nytimes/drone-gke/tree/develop) branch will update the image tagged `develop`.
 - Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the images tagged `latest` and corresponding `kubectl` versions.
@@ -30,19 +35,21 @@ The last two-three minor releases are supported ([same as GKE](https://cloud.goo
 The git workflow follows git-flow.
 New features should be based on the `master` branch.
 
-[`glide`](https://github.com/Masterminds/glide) is used to manage vendor dependencies.
+Go Modules is used to manage dependencies.
+
+### Building
 
 ```bash
 go build
 ```
 
-## Testing
+### Testing
 
 ```bash
 go test
 ```
 
-## Docker
+### Container publishing
 
 Build the Docker image with the following commands:
 
