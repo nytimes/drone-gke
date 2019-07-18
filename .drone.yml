@@ -21,9 +21,10 @@ pipeline:
   test:
     image: golang:1
     environment:
+      - GO111MODULE=on
       - CGO_ENABLED=0
     commands:
-      - go get
+      - go mod download
       - go vet
       - go test -cover
 
