@@ -37,65 +37,134 @@ New features should be based on the `master` branch.
 
 Go Modules is used to manage dependencies.
 
-### Building
+### Go
+
+#### Building drone-gke executable
 
 ```bash
-go build
+make drone-gke
 ```
 
-### Testing
+#### Testing the executable
 
 ```bash
 go test
 ```
 
-### Container publishing
+### Docker
 
-Build the Docker image with the following commands:
+#### Building images
 
+Using a custom repo name:
+
+```sh
+docker_repo_name=your-docker-hub-user make docker-build
 ```
-OWNER=your-docker-hub-user ./bin/dist
+
+Using a custom tag:
+
+```sh
+docker_tag=alpha make docker-build
+```
+
+#### Publishing images
+
+Existing images:
+
+```sh
+# runs docker push with custom repo, tag values
+docker_repo_name=your-docker-hub-user docker_tag=alpha make docker-release
+```
+
+## All-in-one
+
+```sh
+# runs go build, docker build, docker push using defaults
+make dist
 ```
 
 ## Usage
 
-Using it in a `.drone.yml` pipeline: please take a look at [the docs](DOCS.md).
+### Running within a Drone pipeline
 
-Executing locally from the working directory:
+Please take a look at [the docs](DOCS.md).
 
-```
+### Running locally
+
+Using sample configurations within `local-example`:
+
+```sh
 # Deploy the manifest templates in local-example/
-$ cd local-example/
+export GOOGLE_APPLICATION_CREDENTIALS=~/tmp/key.json
+export PLUGIN_CLUSTER=dev
+export PLUGIN_NAMESPACE=drone-gke-test
+export PLUGIN_ZONE=us-east1-b
+export docker_cmd='--verbose --dry-run' # Remove --dry-run to deploy
+make docker-run-local
+```
 
-# Set to the path of your GCP service account JSON file
-$ export GOOGLE_APPLICATION_CREDENTIALS=xxx
+Using custom configurations with default file names:
 
-# Set to your cluster
-$ export CLUSTER=yyy
+```sh
+# Deploy manifest templates in my-custom-configs
 
-# Set to your cluster's zone
-$ export ZONE=zzz
+# my-custom-configs
+# ├── .kube.sec.yml
+# ├── .kube.yml
+# └── vars.json
 
-# The variables required for the templates in JSON format
-$ cat vars.json
-{
-   "app": "echo",
-   "env": "dev",
-   "image": "gcr.io/google_containers/echoserver:1.4"
-}
+export CONFIG_HOME=$(pwd)/my-custom-configs
+make docker-run-local
+```
 
-# Execute the plugin
-$ docker run --rm \
-  -e PLUGIN_CLUSTER="$CLUSTER" \
-  -e PLUGIN_ZONE="$ZONE" \
-  -e PLUGIN_NAMESPACE=drone-gke \
-  -e PLUGIN_VARS="$(cat vars.json)" \
-  -e TOKEN="$(cat $GOOGLE_APPLICATION_CREDENTIALS)" \
-  -e SECRET_API_TOKEN=123 \
-  -e SECRET_BASE64_P12_CERT="cDEyCg==" \
-  -v $(pwd):$(pwd) \
-  -w $(pwd) \
-  nytimes/drone-gke --dry-run --verbose
+Using custom configurations with custom file names:
 
-# Remove --dry-run to deploy
+```sh
+# Deploy manifest templates in my-super-custom-configs
+
+# my-super-custom-configs
+# ├── app.yml
+# ├── custom-vars.json
+# └── secrets.yml
+
+export CONFIG_HOME=$(pwd)/my-super-custom-configs
+export PLUGIN_SECRET_TEMPLATE=${CONFIG_HOME}/secrets.yml
+export PLUGIN_TEMPLATE=${CONFIG_HOME}/app.yml
+export PLUGIN_VARS_PATH=${CONFIG_HOME}/custom-vars.json
+make docker-run-local
+```
+
+If you have an existing `gcloud` configuration for `container/cluster`:
+
+```sh
+export PLUGIN_CLUSTER=$(gcloud --quiet config get-value container/cluster 2>/dev/null)
+make docker-run-local
+```
+
+If your current `kubectl` context is set for a particular namespace:
+
+```sh
+export PLUGIN_NAMESPACE=$(kubectl config view --minify --output 'jsonpath={..namespace}')
+make docker-run-local
+```
+
+If you have an existing `gcloud` configuration for `compute/zone`:
+
+```sh
+export PLUGIN_ZONE=$(gcloud --quiet config get-value compute/zone 2>/dev/null)
+make docker-run-local
+```
+
+If you've built the docker image using a custom repo or tag:
+
+```sh
+export docker_repo_name=nytm
+export docker_tag=alpha
+make docker-run-local
+```
+
+To print the commands that would be executed, without _actually_ executing them:
+
+```sh
+make docker-run-local -n
 ```

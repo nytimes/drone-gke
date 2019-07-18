@@ -7,7 +7,7 @@ build_config: &build_config
   image: golang:1
   environment:
     - GO111MODULE=on
-    - GOPROXY=https://proxy.golang.org 
+    - GOPROXY=https://proxy.golang.org
     - CGO_ENABLED=0
   commands:
     - go build -a -ldflags "-X main.version=${DRONE_TAG:-other} -X main.rev=${DRONE_COMMIT}"
@@ -15,6 +15,7 @@ build_config: &build_config
 publish_config: &publish_config
   image: plugins/docker
   repo: nytimes/drone-gke
+  dockerfile: Dockerfile
   secrets:
     - docker_username
     - docker_password
@@ -24,7 +25,7 @@ pipeline:
     image: golang:1
     environment:
       - GO111MODULE=on
-      - GOPROXY=https://proxy.golang.org 
+      - GOPROXY=https://proxy.golang.org
       - CGO_ENABLED=0
     commands:
       - go mod download
@@ -44,6 +45,8 @@ pipeline:
 
   publish_develop:
     <<: *publish_config
+    build_args:
+    - CLOUD_SDK_VERSION=alpine
     tag:
       - "develop"
     when:
@@ -52,19 +55,23 @@ pipeline:
 
   publish_latest:
     <<: *publish_config
+    build_args:
+    - CLOUD_SDK_VERSION=alpine
     auto_tag: true
 
   publish_1_10:
     <<: *publish_config
+    build_args:
+    - CLOUD_SDK_VERSION=217.0.0
     auto_tag: true
     auto_tag_suffix: "k8s-1.10"
-    dockerfile: Dockerfile.1.10
 
   publish_1_11:
     <<: *publish_config
+    build_args:
+    - CLOUD_SDK_VERSION=241.0.0
     auto_tag: true
     auto_tag_suffix: "k8s-1.11"
-    dockerfile: Dockerfile.1.11
 
   slack:
     image: plugins/slack

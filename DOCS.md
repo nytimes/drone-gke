@@ -1,3 +1,5 @@
+# drone-gke Usage
+
 Use this plugin to deploy Docker images to [Google Container Engine (GKE)][gke].
 
 [gke]: https://cloud.google.com/container-engine/
@@ -47,7 +49,7 @@ Simply copy the contents of the JSON credentials file and paste it directly in t
 
 #### CLI
 
-```
+```sh
 drone secret add \
   --event push \
   --event pull_request \
@@ -78,19 +80,17 @@ Kubernetes expects secrets to be base64 encoded, `drone-gke` does that for you. 
 
 These variables are always available to reference in any manifest, and cannot be overwritten by `vars` or `secrets`:
 
-```
----START VARIABLES AVAILABLE FOR ALL TEMPLATES---
+```json
 {
-	"BRANCH": "master",
-	"BUILD_NUMBER": "12",
-	"COMMIT": "4923x0c3380413ec9288e3c0bfbf534b0f18fed1",
-	"TAG": "",
-	"cluster": "my-gke-cluster",
-	"namespace": "",
-	"project": "my-gcp-proj",
-	"zone": "us-east1-a"
+  "BRANCH": "master",
+  "BUILD_NUMBER": "12",
+  "COMMIT": "4923x0c3380413ec9288e3c0bfbf534b0f18fed1",
+  "TAG": "",
+  "cluster": "my-gke-cluster",
+  "namespace": "",
+  "project": "my-gcp-proj",
+  "zone": "us-east1-a"
 }
----END VARIABLES AVAILABLE FOR ALL TEMPLATES---
 ```
 
 ## Expanding environment variables
