@@ -6,6 +6,8 @@ workspace:
 build_config: &build_config
   image: golang:1
   environment:
+    - GO111MODULE=on
+    - GOPROXY=https://proxy.golang.org 
     - CGO_ENABLED=0
   commands:
     - go build -a -ldflags "-X main.version=${DRONE_TAG:-other} -X main.rev=${DRONE_COMMIT}"
@@ -21,8 +23,11 @@ pipeline:
   test:
     image: golang:1
     environment:
+      - GO111MODULE=on
+      - GOPROXY=https://proxy.golang.org 
       - CGO_ENABLED=0
     commands:
+      - go mod download
       - go vet
       - go test -cover
 
