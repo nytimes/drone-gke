@@ -5,7 +5,7 @@ git := $(shell which git)
 go := $(shell which go)
 grep := $(shell which grep) --quiet --no-messages
 kubectl := $(shell which kubectl)
-terraform := $(shell which terraform012)
+terraform := $(shell which terraform)
 
 # project options
 project_tmp_dir = tmp

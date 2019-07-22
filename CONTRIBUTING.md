@@ -89,11 +89,11 @@ docker_repo_name=alice docker_tag=alpha make docker-push
 
 ### Running `drone-gke` locally
 
-> :warning: Valid GCP service account credentials are required. See ["Creating test serivce account credentials"](creating-test-service-account-credentials) for more details.
+> :warning: Valid GCP service account credentials are required. See ["Creating test serivce account credentials"](#creating-test-service-account-credentials) for more details.
 
 #### Configuring [`TOKEN`](DOCS.md#secrets)
 
-If you created test service account credentials using ["Creating test serivce account credentials"](creating-test-service-account-credentials), those credentials will be used by default.
+If you created test service account credentials using ["Creating test serivce account credentials"](#creating-test-service-account-credentials), those credentials will be used by default.
 
 If using service account credentials that you created manually:
 
