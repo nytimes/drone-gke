@@ -239,7 +239,8 @@ $(terraform_state_file) : $(terraform_dir) $(terraform_base_dir)/main.tf
 	@cd $(terraform_base_dir) && \
 		$(terraform) refresh
 
-$(terraform_plan_file) : export GOOGLE_PROJECT ?= $(shell $(gcloud) --quiet config get-value core/project 2>/dev/null)
+$(terraform_plan_file) : export GOOGLE_PROJECT ?= $(shell $(gcloud) config get-value core/project 2>/dev/null)
+$(terraform_plan_file) : export GOOGLE_OAUTH_ACCESS_TOKEN ?= $(shell $(gcloud) auth print-access-token 2>/dev/null)
 $(terraform_plan_file) : export TF_VAR_drone_gke_test_key_path = $(CURDIR)/$(test_sa_key_path)
 
 $(terraform_plan_file) : $(terraform_state_file) $(terraform_base_dir)/main.tf
@@ -247,7 +248,8 @@ $(terraform_plan_file) : $(terraform_state_file) $(terraform_base_dir)/main.tf
 		$(terraform) plan -out $(CURDIR)/$@
 
 # create test resources configuration
-$(test_sa_key_path) : export GOOGLE_PROJECT ?= $(shell $(gcloud) --quiet config get-value core/project 2>/dev/null)
+$(test_sa_key_path) : export GOOGLE_PROJECT ?= $(shell $(gcloud) config get-value core/project 2>/dev/null)
+$(test_sa_key_path) : export GOOGLE_OAUTH_ACCESS_TOKEN ?= $(shell $(gcloud) auth print-access-token 2>/dev/null)
 $(test_sa_key_path) : export TF_VAR_drone_gke_test_key_path = $(CURDIR)/$(test_sa_key_path)
 
 # create test resources
@@ -259,7 +261,8 @@ $(test_sa_key_path) : $(project_tmp_dir) $(terraform_plan_file) $(terraform_base
 test-resources : $(test_sa_key_path)
 
 # destroy test service account credentials configuration
-destroy-terraform : export GOOGLE_PROJECT ?= $(shell $(gcloud) --quiet config get-value core/project 2>/dev/null)
+destroy-terraform : export GOOGLE_PROJECT ?= $(shell $(gcloud) config get-value core/project 2>/dev/null)
+destroy-terraform : export GOOGLE_OAUTH_ACCESS_TOKEN ?= $(shell $(gcloud) auth print-access-token 2>/dev/null)
 destroy-terraform : export TF_VAR_drone_gke_test_key_path = $(CURDIR)/$(test_sa_key_path)
 
 .PHONY : destroy-terraform
