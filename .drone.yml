@@ -62,14 +62,14 @@ pipeline:
   publish_1_10:
     <<: *publish_config
     build_args:
-    - GCLOUD_SDK_TAG=217.0.0
+    - GCLOUD_SDK_TAG=217.0.0-alpine
     auto_tag: true
     auto_tag_suffix: "k8s-1.10"
 
   publish_1_11:
     <<: *publish_config
     build_args:
-    - GCLOUD_SDK_TAG=241.0.0
+    - GCLOUD_SDK_TAG=241.0.0-alpine
     auto_tag: true
     auto_tag_suffix: "k8s-1.11"
 
