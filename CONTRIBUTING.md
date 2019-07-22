@@ -174,6 +174,13 @@ export PLUGIN_VARS="$(cat ${CONFIG_HOME}/custom-vars.json)"
 make run
 ```
 
+Using custom kubectl version:
+
+```sh
+export PLUGIN_KUBECTL_VERSION=1.14
+make run
+```
+
 If you've built the docker image using a custom repo or tag:
 
 ```sh

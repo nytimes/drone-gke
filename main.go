@@ -308,51 +308,34 @@ func checkParams(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: cluster")
 	}
 
-	if !isValidKubectlVersionParam(c, extraKubectlVersions) {
-		return fmt.Errorf(getInvalidKubectlVersionMessage(c, extraKubectlVersions))
+	if err := validateKubectlVersion(c, extraKubectlVersions); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// isValidKubectlVersionParam tests whether a given version is valid within the current environment
-func isValidKubectlVersionParam(c *cli.Context, availableVersions []string) bool {
+// validateKubectlVersion tests whether a given version is valid within the current environment
+func validateKubectlVersion(c *cli.Context, availableVersions []string) error {
 	kubectlVersionParam := c.String("kubectl-version")
 	// using the default version
 	if kubectlVersionParam == "" {
-		return true
+		return nil
 	}
 
 	// using a custom version but no extra versions are available
 	if len(availableVersions) == 0 {
-		return false
+		return fmt.Errorf("Invalid param: kubectl-version was set to %s but no extra kubectl versions are available", kubectlVersionParam)
 	}
 
 	// using a custom version ...
-	// return true if included in available extra versions; false otherwise
+	// return nil if included in available extra versions; error otherwise
 	for _, availableVersion := range availableVersions {
 		if kubectlVersionParam == availableVersion {
-			return true
+			return nil
 		}
 	}
-	return false
-}
-
-// getInvalidKubectlVersionMessage returns an error message for invalid kubectl-version values
-func getInvalidKubectlVersionMessage(c *cli.Context, availableVersions []string) string {
-	kubectlVersionParam := c.String("kubectl-version")
-	// kubectl-version is valid; return an empty string
-	if isValidKubectlVersionParam(c, availableVersions) {
-		return ""
-	}
-
-	// using a custom version but no extra versions are available
-	if len(availableVersions) == 0 {
-		return fmt.Sprintf("Invalid param: kubectl-version was set to %s but no extra kubectl versions are available", kubectlVersionParam)
-	}
-
-	// using a custom version and extra versions are available, but specified version is not included
-	return fmt.Sprintf("Invalid param kubectl-version: %s must be one of %s", kubectlVersionParam, strings.Join(availableVersions, ", "))
+	return fmt.Errorf("Invalid param kubectl-version: %s must be one of %s", kubectlVersionParam, strings.Join(availableVersions, ", "))
 }
 
 // getProjectFromToken gets project id from token

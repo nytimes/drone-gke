@@ -202,6 +202,7 @@ run :
 		--env PLUGIN_CLUSTER \
 		--env PLUGIN_DRY_RUN \
 		--env PLUGIN_EXPAND_ENV_VARS \
+		--env PLUGIN_KUBECTL_VERSION \
 		--env PLUGIN_NAMESPACE \
 		--env PLUGIN_PROJECT \
 		--env PLUGIN_REGION \
