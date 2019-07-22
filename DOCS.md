@@ -332,6 +332,29 @@ pipeline:
     # ...
 ```
 
+### `kubectl_version`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ version of kubectl executable to use
+
+_**notes**_ see [Using "extra" `kubectl` versions](#using-extra-kubectl-versions) for details
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    kubectl_version: "1.14"
+    # ...
+```
+
 ### `dry_run`
 
 _**type**_ `bool`
@@ -470,7 +493,7 @@ To run `drone-gke` using a different version of `kubectl` than the default, set 
 For example, to use the **1.14** version of `kubectl`:
 
 ```yml
-image: nytimes/drone-gke:0.9.1
+image: nytimes/drone-gke
 kubectl_version: "1.14"
 ```
 
@@ -489,13 +512,13 @@ kubectl.$clientVersionMajor.$clientVersionMinor
 To list all of the "extra" `kubectl` versions available within a particular version of `drone-gke`, you can run the following:
 
 ```sh
-# list "extra" kubectl versions available with nytimes/drone-gke:0.9.1
+# list "extra" kubectl versions available with nytimes/drone-gke
 docker run \
   --rm \
   --interactive \
   --tty \
   --entrypoint '' \
-  nytimes/drone-gke:0.9.1 list-extra-kubectl-versions
+  nytimes/drone-gke list-extra-kubectl-versions
 ```
 
 ## Example reference usage
