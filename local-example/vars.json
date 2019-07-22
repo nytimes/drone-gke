@@ -1,5 +1,5 @@
 {
-   "app": "echo",
-   "env": "dev",
-   "image": "gcr.io/google_containers/echoserver:1.4"
+   "app_image": "gcr.io/google_containers/echoserver:1.4",
+   "app_name": "echo",
+   "env": "dev"
 }

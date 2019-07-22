@@ -3,38 +3,38 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 
 metadata:
-  name: {{.app}}-{{.env}}
+  name: {{.app_name}}-{{.env}}
 
 spec:
   replicas: 3
   template:
     metadata:
       labels:
-        app: {{.app}}
+        app: {{.app_name}}
         env: {{.env}}
     spec:
       containers:
         - name: app
-          image: {{.image}}
+          image: {{.app_image}}
           ports:
             - containerPort: 8080
           env:
-            - name: MY_API_TOKEN
+            - name: APP_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{.app}}-{{.env}}
-                  key: api-token
+                  name: {{.app_name}}-{{.env}}
+                  key: app-api-key
 ---
 apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{.app}}-{{.env}}
+  name: {{.app_name}}-{{.env}}
 
 spec:
   type: LoadBalancer
   selector:
-    app: {{.app}}
+    app: {{.app_name}}
     env: {{.env}}
   ports:
     - name: http

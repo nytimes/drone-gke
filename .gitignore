@@ -1,2 +1,4 @@
-/drone-gke
 .vscode
+/drone-gke
+coverage.out
+tmp

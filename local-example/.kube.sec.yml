@@ -3,10 +3,10 @@ apiVersion: v1
 kind: Secret
 
 metadata:
-  name: {{.app}}-{{.env}}
+  name: {{.app_name}}-{{.env}}
 
 type: Opaque
 
 data:
-  api-token: {{.SECRET_API_TOKEN}}
+  app-api-key: {{.SECRET_APP_API_KEY}}
   p12-cert: {{.SECRET_BASE64_P12_CERT}}

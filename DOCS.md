@@ -4,30 +4,377 @@ Use this plugin to deploy Docker images to [Google Container Engine (GKE)][gke].
 
 [gke]: https://cloud.google.com/container-engine/
 
-## Overview
+## API Reference
 
 The following parameters are used to configure this plugin:
 
-* `image` - this plugin's Docker image
-* *optional* `project` - project of the container cluster (defaults to inferring from the service account `token` credential)
-* *optional* `zone` - zone of the container cluster
-* *optional* `region` - region of the container cluster
-* `cluster` - name of the container cluster
-* *optional* `namespace` - Kubernetes namespace to operate in (defaults to `default`)
-* *optional* `template` - Kubernetes manifest template (defaults to `.kube.yml`)
-* *optional* `secret_template` - Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template (defaults to `.kube.sec.yml`)
-* *optional* `wait_deployments` - list of Deployments to wait for successful rollout, using `kubectl rollout status`
-* *optional* `wait_seconds` - if `wait_deployments` is set, number of seconds to wait before failing the build
-* `vars` - variables to use in `template` and `secret_template` (see [below](#available-vars) for details)
-* `secrets` - credential and variables to use in `secret_template` (see [below](#secrets) for details)
-* *optional* `expand_env_vars` - expand environment variables for values in `vars` for reference (defaults to `false`)
+### `image`
 
-### Debugging parameters
+_**type**_ `string`
 
-These optional parameters are useful for debugging:
+_**default**_ `''`
 
-* `dry_run` - do not apply the Kubernetes templates (defaults to `false`)
-* `verbose` - dump available `vars` and the generated Kubernetes `template` (excluding secrets) (defaults to `false`)
+_**description**_ reference to a `drone-gke` Docker image
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke:k8s-1.11
+    # ...
+```
+
+### `project`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ GCP project ID; owner of the GKE cluster
+
+_**notes**_ default inferred from the service account credentials provided via [`token`](#token)
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    project: my-gcp-project
+    # ...
+```
+
+### `zone`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ GCP zone where GKE cluster is located
+
+_**notes**_ required if [`region`](#region) is not provided
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    zone: us-east1-b
+    # ...
+```
+
+### `region`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ GCP region where GKE cluster is located
+
+_**notes**_ required if [`zone`](#zone) is not provided
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    region: us-west1
+    # ...
+```
+
+### `cluster`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ name of GKE cluster
+
+_**notes**_ required
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    cluster: prod
+    # ...
+```
+
+### `template`
+
+_**type**_ `string`
+
+_**default**_ `'.kube.yml'`
+
+_**description**_ path to Kubernetes manifest template
+
+_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    template: k8s/app.yaml
+    # ...
+```
+
+### `secret_template`
+
+_**type**_ `string`
+
+_**default**_ `'.kube.sec.yml'`
+
+_**description**_ path to Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template
+
+_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    secret_template: my-templates/secrets.yaml
+    # ...
+```
+
+### `wait_deployments`
+
+_**type**_ `[]string`
+
+_**default**_ `[]`
+
+_**description**_ list of Deployments to wait for successful rollout, using `kubectl rollout status`
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    wait_deployments:
+    - app
+    - nginx
+    - memcache
+    # ...
+```
+
+### `wait_seconds`
+
+_**type**_ `int`
+
+_**default**_ `0`
+
+_**description**_ number of seconds to wait before failing the build
+
+_**notes**_ ignored if `wait_deployments` is not set
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    wait_seconds: 180
+    wait_deployments:
+    - app
+    - nginx
+    - memcache
+    # ...
+```
+
+### `vars`
+
+_**type**_ `map[string]interface{}`
+
+_**default**_
+
+```go
+{
+  // from $DRONE_BUILD_NUMBER
+  "BUILD_NUMBER": "",
+  // from $DRONE_COMMIT
+  "COMMIT": "",
+  // from $DRONE_BRANCH
+  "BRANCH": "",
+  // from $DRONE_TAG
+  "TAG": "",
+  // from `project`
+  "project": "",
+  // from `zone`
+  "zone": "",
+  // from `cluster`
+  "cluster": "",
+  // from `namespace`
+  "namespace": "",
+}
+```
+
+_**description**_ variables to use in [`template`](#template) and [`secret_template`](#secret_template)
+
+_**notes**_ see ["Available vars"](#available-vars) for details
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    vars:
+      app_name: echo
+      app_image: gcr.io/google_containers/echoserver:1.4
+      env: dev
+    # ...
+```
+
+### `secrets`
+
+_**type**_ `map[string]string`
+
+_**default**_ `{}`
+
+_**description**_ variables to use in [`secret_template`](#secret_template); credentials for `drone-gke`
+
+_**notes**_ `TOKEN` is required; see ["Using secrets"](#using-secrets) for details
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    secrets:
+    # custom secrets; only available within `secret_template`
+    - source: APP_API_KEY_DEV
+      target: SECRET_APP_API_KEY
+    - source: BASE64_P12_CERT_DEV
+      target: SECRET_BASE64_P12_CERT
+    # required by `drone-gke`; not available within templates
+    - source: DRONE_GKE_SERVICE_ACCOUNT_KEY_DEV
+      target: TOKEN
+    # ...
+```
+
+### `expand_env_vars`
+
+_**type**_ `bool`
+
+_**default**_ `false`
+
+_**description**_ expand environment variables for values in [`vars`](#vars) for reference
+
+_**notes**_ only available for `vars` of type `string`; use `$${var_to_expand}` instead of `${var_to_expand}` (two `$$`) to escape drone's variable substitution
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    environment:
+    # ;)
+    - PS1='C:${PWD//\//\\\\}>'
+    vars:
+      # CLOUD_SDK_VERSION (set by google/cloud-sdk) will be expanded
+      message: "deployed using gcloud v$${CLOUD_SDK_VERSION}"
+      # PS1 (set using standard drone `environment` field) will be expanded
+      prompt: "cmd.exe $${PS1}"
+      # HOSTNAME and PATH (set by shell) will not be expanded; the `hostnames` and `env` vars are set to non-string values
+      hostnames:
+      - example.com
+      - blog.example.com
+      - "$${HOSTNAME}"
+      env:
+        path: "$${PATH}"
+    # ...
+```
+
+### `dry_run`
+
+_**type**_ `bool`
+
+_**default**_ `false`
+
+_**description**_ do not apply the Kubernetes templates
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    dry_run: true
+    # ...
+```
+
+### `verbose`
+
+_**type**_ `bool`
+
+_**default**_ `false`
+
+_**description**_ dump available [`vars`](#vars) and the generated Kubernetes [`template`](#template)
+
+_**notes**_ excludes secrets
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    verbose: true
+    # ...
+```
 
 ## Service Account Credentials
 
@@ -70,7 +417,7 @@ If connecting to a [zonal cluster](https://cloud.google.com/kubernetes-engine/do
 
 The `zone` and `region` parameters are mutually exclusive; providing both to the plugin for the same execution will result in an error.
 
-## Secrets
+## Using `secrets`
 
 `drone-gke` also supports creating Kubernetes secrets for you. These secrets should be passed from Drone secrets to the plugin as environment variables with targets with the prefix `secret_`. These secrets will be used as variables in the `secret_template` in their environment variable form (uppercased).
 
@@ -162,7 +509,7 @@ pipeline:
     secrets:
       - source: GOOGLE_CREDENTIALS
         target: token
-      - source: API_TOKEN
+      - source: APP_API_KEY
         target: secret_api_token
       - source: P12_CERT
         target: secret_base64_p12_cert
@@ -201,11 +548,11 @@ spec:
               value: {{.app}}
             - name: USER
               value: {{.user}}
-            - name: API_TOKEN
+            - name: APP_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{.app}}-{{.env}}
-                  key: api-token
+                  key: app-api-key
 ---
 apiVersion: v1
 kind: Service
@@ -240,6 +587,6 @@ metadata:
 type: Opaque
 
 data:
-  api-token: {{.SECRET_API_TOKEN}}
+  app-api-key: {{.SECRET_APP_API_KEY}}
   p12-cert: {{.SECRET_BASE64_P12_CERT}}
 ```

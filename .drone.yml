@@ -46,7 +46,7 @@ pipeline:
   publish_develop:
     <<: *publish_config
     build_args:
-    - CLOUD_SDK_VERSION=alpine
+    - GCLOUD_SDK_TAG=alpine
     tag:
       - "develop"
     when:
@@ -56,20 +56,20 @@ pipeline:
   publish_latest:
     <<: *publish_config
     build_args:
-    - CLOUD_SDK_VERSION=alpine
+    - GCLOUD_SDK_TAG=alpine
     auto_tag: true
 
   publish_1_10:
     <<: *publish_config
     build_args:
-    - CLOUD_SDK_VERSION=217.0.0
+    - GCLOUD_SDK_TAG=217.0.0
     auto_tag: true
     auto_tag_suffix: "k8s-1.10"
 
   publish_1_11:
     <<: *publish_config
     build_args:
-    - CLOUD_SDK_VERSION=241.0.0
+    - GCLOUD_SDK_TAG=241.0.0
     auto_tag: true
     auto_tag_suffix: "k8s-1.11"
 
