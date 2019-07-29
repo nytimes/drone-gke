@@ -47,7 +47,7 @@ make check
 
 #### Go
 
-[Go Modules](https://blog.golang.org/using-go-modules) is used to manage dependencies. As a result, **Go v1.12+ is required**.
+[Go Modules](https://blog.golang.org/using-go-modules) is used to manage dependencies.
 
 ### Build, Test, Push
 
