@@ -10,6 +10,6 @@ RUN \
   gcloud --no-user-output-enabled components install kubectl && \
     rm -rf /google-cloud-sdk/.install
 
-ADD drone-gke bin/entrypoint bin/list-extra-kubectl-versions /usr/local/bin/
+ADD drone-gke bin/set-env-versions bin/list-extra-kubectl-versions /usr/local/bin/
 
-ENTRYPOINT ["entrypoint", "drone-gke"]
+ENTRYPOINT ["set-env-versions", "drone-gke"]
