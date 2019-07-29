@@ -89,11 +89,7 @@ check-go :
 ifneq (0,$(shell command -v $(go) 2>&1 >/dev/null ; echo $$?))
 	$(error "go not installed")
 else
-ifneq (0,$(shell $(go) version | cut -d ' ' -f 3 | tr -d 'go' | $(grep) --extended '^1\.12' ; echo $$?))
-	$(error "go version 1.12.x is required")
-else
 	@exit 0
-endif
 endif
 
 # check that kubectl is installed
@@ -111,11 +107,7 @@ check-terraform :
 ifneq (0,$(shell command -v $(terraform) 2>&1 >/dev/null ; echo $$?))
 	$(error "terraform not installed")
 else
-ifneq (0,$(shell $(terraform) version | head -n 1 | cut -d ' ' -f 2 | $(grep) --extended '^v0\.12' ; echo $$?))
-	$(error "terraform version 0.12.x is required")
-else
 	@exit 0
-endif
 endif
 
 # check that all required executables are installed
