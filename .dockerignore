@@ -1,0 +1,6 @@
+.git
+.github
+.vscode
+coverage.out
+local-example
+tmp

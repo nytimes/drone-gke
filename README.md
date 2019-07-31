@@ -11,6 +11,7 @@ Derive the API endpoints and credentials from the Google credentials and open th
 - Usage [documentation](DOCS.md)
 - Docker Hub [release tags](https://hub.docker.com/r/nytimes/drone-gke/tags)
 - Drone.io [builds](https://beta.drone.io/nytimes/drone-gke)
+- Contributing [documentation](CONTRIBUTING.md)
 
 ## Releases and versioning
 
@@ -30,69 +31,49 @@ The last two-three minor releases are supported ([same as GKE](https://cloud.goo
 - Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the images tagged `latest` and corresponding `kubectl` versions.
 - Tags to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will create the images with the tag value (eg `0.7.1` and `0.7`) and corresponding `kubectl` versions.
 
-## Development
-
-The git workflow follows git-flow.
-New features should be based on the `master` branch.
-
-Go Modules is used to manage dependencies.
-
-### Building
-
-```bash
-go build
-```
-
-### Testing
-
-```bash
-go test
-```
-
-### Container publishing
-
-Build the Docker image with the following commands:
-
-```
-OWNER=your-docker-hub-user ./bin/dist
-```
-
 ## Usage
 
-Using it in a `.drone.yml` pipeline: please take a look at [the docs](DOCS.md).
+> :warning: For usage within in a `.drone.yml` pipeline, please take a look at [the docs](DOCS.md)
 
 Executing locally from the working directory:
 
-```
+```sh
 # Deploy the manifest templates in local-example/
-$ cd local-example/
+cd local-example/
 
-# Set to the path of your GCP service account JSON file
-$ export GOOGLE_APPLICATION_CREDENTIALS=xxx
+# Set to the path of your GCP service account JSON-formatted key file
+export TOKEN=xxx
 
 # Set to your cluster
-$ export CLUSTER=yyy
+export PLUGIN_CLUSTER=yyy
 
 # Set to your cluster's zone
-$ export ZONE=zzz
+export PLUGIN_ZONE=zzz
 
-# The variables required for the templates in JSON format
-$ cat vars.json
-{
-   "app": "echo",
-   "env": "dev",
-   "image": "gcr.io/google_containers/echoserver:1.4"
-}
+# Set to a namespace within your cluster's
+export PLUGIN_NAMESPACE=drone-gke
+
+# Example variables referenced within .kube.yml
+export PLUGIN_VARS="$(cat vars.json)"
+# {
+#   "app": "echo",
+#   "env": "dev",
+#   "image": "gcr.io/google_containers/echoserver:1.4"
+# }
+
+# Example secrets referenced within .kube.sec.yml
+export SECRET_APP_API_KEY=123
+export SECRET_BASE64_P12_CERT="cDEyCg=="
 
 # Execute the plugin
-$ docker run --rm \
-  -e PLUGIN_CLUSTER="$CLUSTER" \
-  -e PLUGIN_ZONE="$ZONE" \
-  -e PLUGIN_NAMESPACE=drone-gke \
-  -e PLUGIN_VARS="$(cat vars.json)" \
-  -e TOKEN="$(cat $GOOGLE_APPLICATION_CREDENTIALS)" \
-  -e SECRET_API_TOKEN=123 \
-  -e SECRET_BASE64_P12_CERT="cDEyCg==" \
+docker run --rm \
+  -e PLUGIN_CLUSTER \
+  -e PLUGIN_NAMESPACE \
+  -e PLUGIN_VARS \
+  -e PLUGIN_ZONE  \
+  -e SECRET_APP_API_KEY \
+  -e SECRET_BASE64_P12_CERT \
+  -e TOKEN="$(cat $TOKEN)" \
   -v $(pwd):$(pwd) \
   -w $(pwd) \
   nytimes/drone-gke --dry-run --verbose
