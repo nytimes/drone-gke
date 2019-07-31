@@ -74,6 +74,39 @@ func TestCheckParams(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestValidateKubectlVersion(t *testing.T) {
+	// kubectl-version is NOT set (using default kubectl version)
+	set := flag.NewFlagSet("default-kubectl-version", 0)
+	c := cli.NewContext(nil, set, nil)
+	availableVersions := []string{}
+	err := validateKubectlVersion(c, availableVersions)
+	assert.NoError(t, err, "expected validateKubectlVersion to return nil when no kubectl-version param was set")
+
+	// kubectl-version is set and extra kubectl versions are NOT available
+	set = flag.NewFlagSet("kubectl-version-set-no-extra-versions-available", 0)
+	c = cli.NewContext(nil, set, nil)
+	set.String("kubectl-version", "1.14", "")
+	availableVersions = []string{}
+	err = validateKubectlVersion(c, availableVersions)
+	assert.Error(t, err, "expected validateKubectlVersion to return an error when no extra kubectl versions are available")
+
+	// kubectl-version is set, extra kubectl versions are available, kubectl-version is included
+	set = flag.NewFlagSet("valid-kubectl-version", 0)
+	c = cli.NewContext(nil, set, nil)
+	set.String("kubectl-version", "1.13", "")
+	availableVersions = []string{"1.11", "1.12", "1.13", "1.14"}
+	err = validateKubectlVersion(c, availableVersions)
+	assert.NoError(t, err, "expected validateKubectlVersion to return an error when kubectl-version is set, extra kubectl versions are available, kubectl-version is included")
+
+	// kubectl-version is set, extra kubectl versions are available, kubectl-version is NOT included
+	set = flag.NewFlagSet("invalid-kubectl-version", 0)
+	c = cli.NewContext(nil, set, nil)
+	set.String("kubectl-version", "9.99", "")
+	availableVersions = []string{"1.11", "1.12", "1.13", "1.14"}
+	err = validateKubectlVersion(c, availableVersions)
+	assert.Error(t, err, "expected validateKubectlVersion to return nil when kubectl-version is set, extra kubectl versions are available, kubectl-version is NOT included")
+}
+
 func TestGetProjectFromToken(t *testing.T) {
 	token := "{\"project_id\":\"test-project\"}"
 	assert.Equal(t, "test-project", getProjectFromToken(token))

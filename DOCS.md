@@ -332,6 +332,29 @@ pipeline:
     # ...
 ```
 
+### `kubectl_version`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ version of kubectl executable to use
+
+_**notes**_ see [Using "extra" `kubectl` versions](#using-extra-kubectl-versions) for details
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    kubectl_version: "1.14"
+    # ...
+```
+
 ### `dry_run`
 
 _**type**_ `bool`
@@ -460,6 +483,43 @@ To use `$${IMAGE_VERSION}` or `$IMAGE_VERSION`, see the [Drone docs][environment
 
 [expand]: https://golang.org/pkg/os/#ExpandEnv
 [environment]: http://docs.drone.io/environment/
+
+## Using "extra" `kubectl` versions
+
+### tl;dr
+
+To run `drone-gke` using a different version of `kubectl` than the default, set `kubectl-version` to the version you'd like to use.
+
+For example, to use the **1.14** version of `kubectl`:
+
+```yml
+image: nytimes/drone-gke
+kubectl_version: "1.14"
+```
+
+This will configure the plugin to execute `/google-cloud-sdk/bin/kubectl.1.14` instead of `/google-cloud-sdk/bin/kubectl` for all `kubectl` commands.
+
+### Background
+
+Beginning with the [`237.0.0 (2019-03-05)` release of the `gcloud` SDK](https://cloud.google.com/sdk/docs/release-notes#23700_2019-03-05), "extra" `kubectl` versions are installed automatically when `kubectl` is installed via `gcloud components install kubectl`.
+
+These "extra" versions are installed alongside the SDK's default `kubectl` version at `/google-cloud-sdk/bin` and are named using the following pattern:
+
+```sh
+kubectl.$clientVersionMajor.$clientVersionMinor
+```
+
+To list all of the "extra" `kubectl` versions available within a particular version of `drone-gke`, you can run the following:
+
+```sh
+# list "extra" kubectl versions available with nytimes/drone-gke
+docker run \
+  --rm \
+  --interactive \
+  --tty \
+  --entrypoint '' \
+  nytimes/drone-gke list-extra-kubectl-versions
+```
 
 ## Example reference usage
 

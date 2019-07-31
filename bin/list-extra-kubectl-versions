@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -e
+
+# location to search for extra kubectl version
+# defaults to default used by `gcloud components install kubectl`
+gcloud_sdk_bin_dir=${1:-'/google-cloud-sdk/bin'}
+
+# filename glob for extra kubectl versions
+# defaults to default used by `gcloud components install kubectl`
+extra_kubectl_glob=${2:-'kubectl.*'}
+
+find ${gcloud_sdk_bin_dir} -type f -name ${extra_kubectl_glob} -exec basename {} \; \
+  | cut -d '.' -f 2,3 \
+  | sort -g
