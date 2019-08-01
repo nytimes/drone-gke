@@ -89,11 +89,11 @@ docker_repo_name=alice docker_tag=alpha make docker-push
 
 ### Running `drone-gke` locally
 
-> :warning: Valid GCP service account credentials are required. See ["Creating test serivce account credentials"](#creating-test-service-account-credentials) for more details.
+> :warning: Valid GCP service account credentials are required. See ["Creating test service account credentials"](#creating-test-service-account-credentials) for more details.
 
 #### Configuring [`TOKEN`](DOCS.md#secrets)
 
-If you created test service account credentials using ["Creating test serivce account credentials"](#creating-test-service-account-credentials), those credentials will be used by default.
+If you created test service account credentials using ["Creating test service account credentials"](#creating-test-service-account-credentials), those credentials will be used by default.
 
 If using service account credentials that you created manually:
 
@@ -238,7 +238,7 @@ export docker_tag=alpha
 make release
 ```
 
-#### Creating test serivce account credentials
+#### Creating test service account credentials
 
 > :warning: The following requires access to an active GCP project, a GCP user account with sufficient privileges, properly configured `gcloud`, and `terraform` executables. Please review ["Creating and managing service accounts"](https://cloud.google.com/iam/docs/creating-managing-service-accounts) and the Terraform ["Google Cloud Platform Provider"](https://www.terraform.io/docs/providers/google/index.html) documentation before continuing.
 
