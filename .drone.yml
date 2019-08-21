@@ -53,31 +53,16 @@ pipeline:
       event: push
       branch: develop
 
-  publish_latest:
+  publish_release:
     <<: *publish_config
     build_args:
     - GCLOUD_SDK_TAG=alpine
     auto_tag: true
 
-  publish_1_10:
-    <<: *publish_config
-    build_args:
-    - GCLOUD_SDK_TAG=217.0.0-alpine
-    auto_tag: true
-    auto_tag_suffix: "k8s-1.10"
-
-  publish_1_11:
-    <<: *publish_config
-    build_args:
-    - GCLOUD_SDK_TAG=241.0.0-alpine
-    auto_tag: true
-    auto_tag_suffix: "k8s-1.11"
-
   slack:
     image: plugins/slack
     channel: dv-notifications
-    secrets:
-      - slack_webhook
+    secrets: [slack_webhook]
     when:
       branch:
         - develop
@@ -86,8 +71,7 @@ pipeline:
   slack_tag:
     image: plugins/slack
     channel: dv-notifications
-    secrets:
-      - slack_webhook
+    secrets: [slack_webhook]
     when:
       event:
         - tag
