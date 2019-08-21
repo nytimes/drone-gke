@@ -1,5 +1,5 @@
 # see https://hub.docker.com/r/google/cloud-sdk/tags for available tags / versions
-ARG GCLOUD_SDK_TAG
+ARG GCLOUD_SDK_TAG=alpine
 
 FROM google/cloud-sdk:${GCLOUD_SDK_TAG}
 
