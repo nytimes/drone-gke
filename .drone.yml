@@ -45,9 +45,7 @@ pipeline:
 
   publish_develop:
     <<: *publish_config
-    build_args:
-    - GCLOUD_SDK_TAG=alpine
-    tag:
+    tags:
       - "develop"
     when:
       event: push
@@ -55,8 +53,6 @@ pipeline:
 
   publish_release:
     <<: *publish_config
-    build_args:
-    - GCLOUD_SDK_TAG=alpine
     auto_tag: true
 
   slack:
