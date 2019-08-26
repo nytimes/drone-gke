@@ -17,19 +17,27 @@ Derive the API endpoints and credentials from the Google credentials and open th
 
 ### Tool
 
+This tool follows [semantic versioning](https://semver.org/).
+
 Use the `x.X` releases for stable use cases (eg 0.8).
 Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be documented in the [release notes](https://github.com/nytimes/drone-gke/releases).
 
 ### Kubernetes API
 
-Use the release [tag](https://hub.docker.com/r/nytimes/drone-gke/tags/) suffixed with your desired `kubectl` version.
-The last two-three minor releases are supported ([same as GKE](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades)).
+Since the [237.0.0 (2019-03-05) Google Cloud SDK][sdk], the container image contains multiple versions of `kubectl`.
+The corresponding client version that matches the cluster version will be used automatically.
+This follows the minor release support that [GKE offers](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades).
+
+If you want to use a different version, you can specify the version of `kubectl` used with the [`kubectl_version` parameter][version-parameter].
+
+[sdk]: https://cloud.google.com/sdk/docs/release-notes#23700_2019-03-05
+[version-parameter]: DOCS.md#kubectl_version
 
 ### Container
 
 - Pushes to the [`develop`](https://github.com/nytimes/drone-gke/tree/develop) branch will update the image tagged `develop`.
-- Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the images tagged `latest` and corresponding `kubectl` versions.
-- Tags to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will create the images with the tag value (eg `0.7.1` and `0.7`) and corresponding `kubectl` versions.
+- Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the image tagged `latest`.
+- Tags to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will create the images with the patch and minor tag values (eg `0.7.1` and `0.7`).
 
 ## Usage
 
