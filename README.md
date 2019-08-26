@@ -26,7 +26,7 @@ Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be 
 
 Since the [237.0.0 (2019-03-05) Google Cloud SDK][sdk], the container image contains multiple versions of `kubectl`.
 The corresponding client version that matches the cluster version will be used automatically.
-This follows the minor release support that ([GKE offers](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades)).
+This follows the minor release support that [GKE offers](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades).
 
 If you want to use a different version, you can specify the version of `kubectl` used with the [`kubectl_version` parameter][version-parameter].
 
