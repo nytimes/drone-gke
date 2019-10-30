@@ -683,7 +683,7 @@ func waitForRollout(c *cli.Context, runner Runner, waitDeployments []string) err
 		path := kubectlCmd
 
 		if waitSeconds != 0 {
-			command = append([]string{"-t", strconv.Itoa(waitSeconds), path}, command...)
+			command = append([]string{strconv.Itoa(waitSeconds), path}, command...)
 			path = timeoutCmd
 		}
 
