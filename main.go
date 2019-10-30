@@ -634,19 +634,19 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 
 		log("Applying Kubernetes manifests to the cluster\n")
 	}
-
-	// Actually apply Kubernetes manifests.
-	args := applyArgs(c.Bool("dry-run"), manifests)
-	if err := runner.Run(kubectlCmd, args...); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
-	}
-
+	
 	// Apply Kubernetes secrets manifests
 	if len(manifestsSecret) > 0 {
 		argsSecret := applyArgs(c.Bool("dry-run"), manifestsSecret)
 		if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
+	}
+
+	// Actually apply Kubernetes manifests.
+	args := applyArgs(c.Bool("dry-run"), manifests)
+	if err := runner.Run(kubectlCmd, args...); err != nil {
+		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	return nil
