@@ -489,8 +489,8 @@ func TestWaitForRollout(t *testing.T) {
 	c := cli.NewContext(nil, set, nil)
 
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"timeout", "-t", "256", "kubectl", "rollout", "status", "deployment", "d1", "--namespace", "test-ns"}).Return(nil)
-	testRunner.On("Run", []string{"timeout", "-t", "256", "kubectl", "rollout", "status", "deployment", "d2", "--namespace", "test-ns"}).Return(nil)
+	testRunner.On("Run", []string{"timeout", "256", "kubectl", "rollout", "status", "deployment", "d1", "--namespace", "test-ns"}).Return(nil)
+	testRunner.On("Run", []string{"timeout", "256", "kubectl", "rollout", "status", "deployment", "d2", "--namespace", "test-ns"}).Return(nil)
 	err := waitForRollout(c, testRunner, []string{"d1", "d2"})
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
