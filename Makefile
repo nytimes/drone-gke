@@ -210,6 +210,7 @@ run :
 		--env PLUGIN_TEMPLATE \
 		--env PLUGIN_VARS \
 		--env PLUGIN_VERBOSE \
+		--env PLUGIN_WAIT_ROLLOUTS \
 		--env PLUGIN_WAIT_DEPLOYMENTS \
 		--env PLUGIN_WAIT_SECONDS \
 		--env PLUGIN_ZONE \

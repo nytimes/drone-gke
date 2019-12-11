@@ -481,19 +481,38 @@ func TestApplyManifests(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestWaitForRollout(t *testing.T) {
-	// No error
+// RunWaitDeployments is a helper function for testing waitForRollout.  For each flag-value 
+// in flagValues it will expect a corresponding call of the form:  
+// "kubectl rollout status <expected-value> ..."
+func RunWaitForRollout(t *testing.T, flagName string, flagValues []string, expectedValues []string) {
 	set := flag.NewFlagSet("test-set", 0)
 	set.Int("wait-seconds", 256, "")
 	set.String("namespace", "test-ns", "")
+	strSlice := cli.StringSlice{}
+	for _, s := range flagValues {
+		strSlice.Set(s)
+	}
+	strSliceFlag := cli.StringSliceFlag{Name: flagName, Value: &strSlice}
+	strSliceFlag.Apply(set)
 	c := cli.NewContext(nil, set, nil)
-
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"timeout", "-t", "256", "kubectl", "rollout", "status", "deployment", "d1", "--namespace", "test-ns"}).Return(nil)
-	testRunner.On("Run", []string{"timeout", "-t", "256", "kubectl", "rollout", "status", "deployment", "d2", "--namespace", "test-ns"}).Return(nil)
-	err := waitForRollout(c, testRunner, []string{"d1", "d2"})
+	for _, s := range expectedValues {
+		testRunner.On("Run", []string{"timeout", "-t", "256", "kubectl", "rollout", "status", s, "--namespace", "test-ns"}).Return(nil)
+	}
+	err := waitForRollout(c, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
+}
+
+func TestWaitForRollout(t *testing.T) {
+	RunWaitForRollout(t, "wait-rollouts", []string{"deployment/d1"}, []string{"deployment/d1"})
+	RunWaitForRollout(t, "wait-rollouts",
+		[]string{"deployment/d1", "statefulset/s1"},
+		[]string{"deployment/d1", "statefulset/s1"})
+	RunWaitForRollout(t, "wait-deployments", []string{"d1"}, []string{"deployment/d1"})
+	RunWaitForRollout(t, "wait-deployments",
+		[]string{"d1", "d2"},
+		[]string{"deployment/d1", "deployment/d2"})
 }
 
 func TestApplyArgs(t *testing.T) {

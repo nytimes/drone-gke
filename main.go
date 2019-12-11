@@ -160,6 +160,11 @@ func wrapMain() error {
 			EnvVar: "DRONE_TAG",
 		},
 		cli.StringSliceFlag{
+			Name:   "wait-rollouts",
+			Usage:  "list of rollouts to wait for using \"kubectl rollout status ...\"",
+			EnvVar: "PLUGIN_WAIT_ROLLOUTS",
+		},
+		cli.StringSliceFlag{
 			Name:   "wait-deployments",
 			Usage:  "list of Deployments to wait for successful rollout, using kubectl rollout status",
 			EnvVar: "PLUGIN_WAIT_DEPLOYMENTS",
@@ -283,7 +288,7 @@ func run(c *cli.Context) error {
 	}
 
 	// Wait for rollout to finish
-	if err := waitForRollout(c, runner, nil); err != nil {
+	if err := waitForRollout(c, runner); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
@@ -653,28 +658,27 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 }
 
 // waitForRollout executes kubectl to wait for rollout to complete before continuing
-// The 3rd parameter waitDeployments is temporary and only used for testing, it
-// will be removed once better solution found
-func waitForRollout(c *cli.Context, runner Runner, waitDeployments []string) error {
-	// waitDeployments parameter overrides the one in cli.Context
-	// temporary for testing
-	if len(waitDeployments) == 0 {
-		waitDeployments = c.StringSlice("wait-deployments")
-	}
+func waitForRollout(c *cli.Context, runner Runner) error {
 
 	namespace := c.String("namespace")
 	waitSeconds := c.Int("wait-seconds")
-	waitDeploymentsCount := len(waitDeployments)
+	rollouts := c.StringSlice("wait-rollouts")
+	// also convert old way
+	for _, v := range c.StringSlice("wait-deployments") {
+		rollouts = append(rollouts, "deployment/" + v)
+	}
+	rolloutsCount := len(rollouts)
 	counterProgress := ""
 
-	for counter, deployment := range waitDeployments {
-		if waitDeploymentsCount > 1 {
-			counterProgress = fmt.Sprintf(" %d/%d", counter+1, waitDeploymentsCount)
+	for counter, rollout := range rollouts {
+
+		if rolloutsCount > 1 {
+			counterProgress = fmt.Sprintf(" %d/%d", counter+1, rolloutsCount)
 		}
 
-		log(fmt.Sprintf("Waiting until rollout completes for %s%s\n", deployment, counterProgress))
+		log(fmt.Sprintf("Waiting until rollout completes for %s%s\n", rollout, counterProgress))
 
-		command := []string{"rollout", "status", "deployment", deployment}
+		command := []string{"rollout", "status", rollout}
 
 		if namespace != "" {
 			command = append(command, "--namespace", namespace)

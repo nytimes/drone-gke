@@ -166,13 +166,37 @@ pipeline:
     # ...
 ```
 
+### `wait_rollouts`
+
+_**type**_ `[]string`
+
+_**default**_ `[]`
+
+_**description**_ wait for the listed rollouts using `kubectl rollout status ...`
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    wait_rollouts:
+    - deployment/nginx
+    - deployment/memcache
+    - statefulset/hazelcast
+    # ...
+```
+
 ### `wait_deployments`
 
 _**type**_ `[]string`
 
 _**default**_ `[]`
 
-_**description**_ list of Deployments to wait for successful rollout, using `kubectl rollout status`
+_**description**_ list of Deployments to wait for successful rollout, using `kubectl rollout status`.  (see also `wait-rollouts`)
 
 _**example**_
 
