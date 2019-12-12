@@ -172,9 +172,10 @@ _**type**_ `[]string`
 
 _**default**_ `[]`
 
-_**description**_ wait for the given deployments using `kubectl rollout status ...`.  Deployments
-can be specified as `"<type>/<name>"` as expected by `kubectl`.  If just `"<name>"` is given it 
-will be defaulted to `"deployment/<name>"`.  
+_**description**_ wait for the given deployments using `kubectl rollout status ...`
+
+_**notes**_ deployments can be specified as `"<type>/<name>"` as expected by `kubectl`.  If 
+just `"<name>"` is given it will be defaulted to `"deployment/<name>"`.  
 
 _**example**_
 
