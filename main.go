@@ -283,7 +283,7 @@ func run(c *cli.Context) error {
 	}
 
 	// Wait for rollout to finish
-	if err := waitForRollout(c, runner, nil); err != nil {
+	if err := waitForRollout(c, runner); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
@@ -653,17 +653,21 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 }
 
 // waitForRollout executes kubectl to wait for rollout to complete before continuing
-// The 3rd parameter waitDeployments is temporary and only used for testing, it
-// will be removed once better solution found
-func waitForRollout(c *cli.Context, runner Runner, waitDeployments []string) error {
-	// waitDeployments parameter overrides the one in cli.Context
-	// temporary for testing
-	if len(waitDeployments) == 0 {
-		waitDeployments = c.StringSlice("wait-deployments")
-	}
+func waitForRollout(c *cli.Context, runner Runner) error {
 
 	namespace := c.String("namespace")
 	waitSeconds := c.Int("wait-seconds")
+	specs := c.StringSlice("wait-deployments")
+	waitDeployments := []string{}
+	for _, spec := range specs {
+		// default type to "deployment" if not present
+		deployment := spec
+		if !strings.Contains(spec, "/") {
+			deployment = "deployment/" + deployment
+		}
+		waitDeployments = append(waitDeployments, deployment)
+	}
+
 	waitDeploymentsCount := len(waitDeployments)
 	counterProgress := ""
 
@@ -674,7 +678,7 @@ func waitForRollout(c *cli.Context, runner Runner, waitDeployments []string) err
 
 		log(fmt.Sprintf("Waiting until rollout completes for %s%s\n", deployment, counterProgress))
 
-		command := []string{"rollout", "status", "deployment", deployment}
+		command := []string{"rollout", "status", deployment}
 
 		if namespace != "" {
 			command = append(command, "--namespace", namespace)
