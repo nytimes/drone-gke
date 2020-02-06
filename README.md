@@ -10,7 +10,7 @@ Derive the API endpoints and credentials from the Google credentials and open th
 
 - Usage [documentation](DOCS.md)
 - Docker Hub [release tags](https://hub.docker.com/r/nytimes/drone-gke/tags)
-- Drone.io [builds](https://beta.drone.io/nytimes/drone-gke)
+- Drone.io [builds](https://cloud.drone.io/nytimes/drone-gke)
 - Contributing [documentation](CONTRIBUTING.md)
 
 ## Releases and versioning
