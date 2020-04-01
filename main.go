@@ -89,7 +89,7 @@ func wrapMain() error {
 		},
 		&cli.StringFlag{
 			Name:    "token",
-			Usage:   "service account's JSON credentials (drone 1.x)",
+			Usage:   "service account's JSON credentials",
 			EnvVars: []string{"PLUGIN_TOKEN", "TOKEN"},
 		},
 		&cli.StringFlag{
