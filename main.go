@@ -16,7 +16,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 type token struct {
@@ -77,104 +77,104 @@ func wrapMain() error {
 	app.Action = run
 	app.Version = fmt.Sprintf("%s-%s", version, rev)
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
-			Name:   "dry-run",
-			Usage:  "do not apply the Kubernetes manifests to the API server",
-			EnvVar: "PLUGIN_DRY_RUN",
+		&cli.BoolFlag{
+			Name:    "dry-run",
+			Usage:   "do not apply the Kubernetes manifests to the API server",
+			EnvVars: []string{"PLUGIN_DRY_RUN"},
 		},
-		cli.BoolFlag{
-			Name:   "verbose",
-			Usage:  "dump available vars and the generated Kubernetes manifest, keeping secrets hidden",
-			EnvVar: "PLUGIN_VERBOSE",
+		&cli.BoolFlag{
+			Name:    "verbose",
+			Usage:   "dump available vars and the generated Kubernetes manifest, keeping secrets hidden",
+			EnvVars: []string{"PLUGIN_VERBOSE"},
 		},
-		cli.StringFlag{
-			Name:   "token",
-			Usage:  "service account's JSON credentials",
-			EnvVar: "TOKEN",
+		&cli.StringFlag{
+			Name:    "token",
+			Usage:   "service account's JSON credentials (drone 1.x)",
+			EnvVars: []string{"PLUGIN_TOKEN", "TOKEN"},
 		},
-		cli.StringFlag{
-			Name:   "project",
-			Usage:  "GCP project name",
-			EnvVar: "PLUGIN_PROJECT",
+		&cli.StringFlag{
+			Name:    "project",
+			Usage:   "GCP project name",
+			EnvVars: []string{"PLUGIN_PROJECT"},
 		},
-		cli.StringFlag{
-			Name:   "zone",
-			Usage:  "zone of the container cluster",
-			EnvVar: "PLUGIN_ZONE",
+		&cli.StringFlag{
+			Name:    "zone",
+			Usage:   "zone of the container cluster",
+			EnvVars: []string{"PLUGIN_ZONE"},
 		},
-		cli.StringFlag{
-			Name:   "region",
-			Usage:  "region of the container cluster",
-			EnvVar: "PLUGIN_REGION",
+		&cli.StringFlag{
+			Name:    "region",
+			Usage:   "region of the container cluster",
+			EnvVars: []string{"PLUGIN_REGION"},
 		},
-		cli.StringFlag{
-			Name:   "cluster",
-			Usage:  "name of the container cluster",
-			EnvVar: "PLUGIN_CLUSTER",
+		&cli.StringFlag{
+			Name:    "cluster",
+			Usage:   "name of the container cluster",
+			EnvVars: []string{"PLUGIN_CLUSTER"},
 		},
-		cli.StringFlag{
-			Name:   "namespace",
-			Usage:  "Kubernetes namespace to operate in",
-			EnvVar: "PLUGIN_NAMESPACE",
+		&cli.StringFlag{
+			Name:    "namespace",
+			Usage:   "Kubernetes namespace to operate in",
+			EnvVars: []string{"PLUGIN_NAMESPACE"},
 		},
-		cli.StringFlag{
-			Name:   "kube-template",
-			Usage:  "optional - template for Kubernetes resources, e.g. deployments",
-			EnvVar: "PLUGIN_TEMPLATE",
-			Value:  ".kube.yml",
+		&cli.StringFlag{
+			Name:    "kube-template",
+			Usage:   "optional - template for Kubernetes resources, e.g. deployments",
+			EnvVars: []string{"PLUGIN_TEMPLATE"},
+			Value:   ".kube.yml",
 		},
-		cli.StringFlag{
-			Name:   "secret-template",
-			Usage:  "optional - template for Kubernetes Secret resources",
-			EnvVar: "PLUGIN_SECRET_TEMPLATE",
-			Value:  ".kube.sec.yml",
+		&cli.StringFlag{
+			Name:    "secret-template",
+			Usage:   "optional - template for Kubernetes Secret resources",
+			EnvVars: []string{"PLUGIN_SECRET_TEMPLATE"},
+			Value:   ".kube.sec.yml",
 		},
-		cli.StringFlag{
-			Name:   "vars",
-			Usage:  "variables to use while templating manifests",
-			EnvVar: "PLUGIN_VARS",
+		&cli.StringFlag{
+			Name:    "vars",
+			Usage:   "variables to use while templating manifests",
+			EnvVars: []string{"PLUGIN_VARS"},
 		},
-		cli.BoolFlag{
-			Name:   "expand-env-vars",
-			Usage:  "expand environment variables contents on vars",
-			EnvVar: "PLUGIN_EXPAND_ENV_VARS",
+		&cli.BoolFlag{
+			Name:    "expand-env-vars",
+			Usage:   "expand environment variables contents on vars",
+			EnvVars: []string{"PLUGIN_EXPAND_ENV_VARS"},
 		},
-		cli.StringFlag{
-			Name:   "drone-build-number",
-			Usage:  "Drone build number",
-			EnvVar: "DRONE_BUILD_NUMBER",
+		&cli.StringFlag{
+			Name:    "drone-build-number",
+			Usage:   "Drone build number",
+			EnvVars: []string{"DRONE_BUILD_NUMBER"},
 		},
-		cli.StringFlag{
-			Name:   "drone-commit",
-			Usage:  "Git commit hash",
-			EnvVar: "DRONE_COMMIT",
+		&cli.StringFlag{
+			Name:    "drone-commit",
+			Usage:   "Git commit hash",
+			EnvVars: []string{"DRONE_COMMIT"},
 		},
-		cli.StringFlag{
-			Name:   "drone-branch",
-			Usage:  "Git branch",
-			EnvVar: "DRONE_BRANCH",
+		&cli.StringFlag{
+			Name:    "drone-branch",
+			Usage:   "Git branch",
+			EnvVars: []string{"DRONE_BRANCH"},
 		},
-		cli.StringFlag{
-			Name:   "drone-tag",
-			Usage:  "Git tag",
-			EnvVar: "DRONE_TAG",
+		&cli.StringFlag{
+			Name:    "drone-tag",
+			Usage:   "Git tag",
+			EnvVars: []string{"DRONE_TAG"},
 		},
-		cli.StringSliceFlag{
-			Name:   "wait-deployments",
-			Usage:  "list of Deployments to wait for successful rollout, using kubectl rollout status",
-			EnvVar: "PLUGIN_WAIT_DEPLOYMENTS",
+		&cli.StringSliceFlag{
+			Name:    "wait-deployments",
+			Usage:   "list of Deployments to wait for successful rollout, using kubectl rollout status",
+			EnvVars: []string{"PLUGIN_WAIT_DEPLOYMENTS"},
 		},
-		cli.IntFlag{
-			Name:   "wait-seconds",
-			Usage:  "if wait-deployments is set, number of seconds to wait before failing the build",
-			EnvVar: "PLUGIN_WAIT_SECONDS",
-			Value:  0,
+		&cli.IntFlag{
+			Name:    "wait-seconds",
+			Usage:   "if wait-deployments is set, number of seconds to wait before failing the build",
+			EnvVars: []string{"PLUGIN_WAIT_SECONDS"},
+			Value:   0,
 		},
-		cli.StringFlag{
-			Name:   "kubectl-version",
-			Usage:  "optional - version of kubectl binary to use, e.g. 1.14",
-			EnvVar: "PLUGIN_KUBECTL_VERSION",
-			Value:  "",
+		&cli.StringFlag{
+			Name:    "kubectl-version",
+			Usage:   "optional - version of kubectl binary to use, e.g. 1.14",
+			EnvVars: []string{"PLUGIN_KUBECTL_VERSION"},
+			Value:   "",
 		},
 	}
 
