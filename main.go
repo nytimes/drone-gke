@@ -60,23 +60,8 @@ func main() {
 	}
 }
 
-func wrapMain() error {
-	if version == "" {
-		version = "x.x.x"
-	}
-
-	if rev == "" {
-		rev = "[unknown]"
-	}
-
-	fmt.Printf("Drone GKE Plugin built from %s\n", rev)
-
-	app := cli.NewApp()
-	app.Name = "gke plugin"
-	app.Usage = "gke plugin"
-	app.Action = run
-	app.Version = fmt.Sprintf("%s-%s", version, rev)
-	app.Flags = []cli.Flag{
+func getAppFlags() []cli.Flag {
+	return []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "dry-run",
 			Usage:   "do not apply the Kubernetes manifests to the API server",
@@ -177,7 +162,25 @@ func wrapMain() error {
 			Value:   "",
 		},
 	}
+}
 
+func wrapMain() error {
+	if version == "" {
+		version = "x.x.x"
+	}
+
+	if rev == "" {
+		rev = "[unknown]"
+	}
+
+	fmt.Printf("Drone GKE Plugin built from %s\n", rev)
+
+	app := cli.NewApp()
+	app.Name = "gke plugin"
+	app.Usage = "gke plugin"
+	app.Action = run
+	app.Version = fmt.Sprintf("%s-%s", version, rev)
+	app.Flags = getAppFlags()
 	if err := app.Run(os.Args); err != nil {
 		return err
 	}

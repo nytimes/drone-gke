@@ -540,3 +540,77 @@ func TestPrintTrimmedError(t *testing.T) {
 	printTrimmedError(strings.NewReader("line 1\nline 2\nline 3"), output)
 	assert.Equal(t, "line 3\n", output.String())
 }
+
+func TestTokenParamPrecedence(t *testing.T) {
+	for _, tst := range []struct {
+		name           string
+		envToken       string
+		envPluginToken string
+
+		expectedToken string
+		expectedOk    bool
+	}{
+		{
+			name:           "just-plugin-token",
+			envToken:       "",
+			envPluginToken: "token123",
+
+			expectedOk:    true,
+			expectedToken: "token123",
+		},
+		{
+			name:           "just-token",
+			envToken:       "token456",
+			envPluginToken: "",
+
+			expectedOk:    true,
+			expectedToken: "token456",
+		},
+		{
+			name:           "both-and-plugin-token-wins",
+			envToken:       "token456",
+			envPluginToken: "token123",
+			expectedOk:    true,
+			expectedToken: "token123",
+		},
+		{
+			name:           "missing-token",
+			envToken:       "",
+			envPluginToken: "",
+
+			expectedOk:    false,
+			expectedToken: "",
+		},
+	} {
+		t.Run(tst.name, func(t *testing.T) {
+			os.Clearenv()
+			
+			os.Setenv("PLUGIN_REGION", "region-123")
+			os.Setenv("PLUGIN_CLUSTER", "cluster-123")
+
+			if tst.envToken != "" {
+				os.Setenv("TOKEN", tst.envToken)
+			}
+
+			if tst.envPluginToken != "" {
+				os.Setenv("PLUGIN_TOKEN", tst.envPluginToken)
+			}
+
+			appErr := (&cli.App{
+				Flags: getAppFlags(),
+				Action: func(ctx *cli.Context) error {
+					if foundToken := ctx.String("token"); foundToken != tst.expectedToken {
+						return fmt.Errorf("found token: %s, expected: %s", foundToken, tst.expectedToken)
+					}
+					return checkParams(ctx)
+				},
+			}).Run([]string{"run"})
+
+			if tst.expectedOk && appErr != nil {
+				t.Fatalf("expected expectedOk, got appErr: %s", appErr)
+			} else if !tst.expectedOk && appErr == nil {
+				t.Fatalf("expected failure, got appErr: %s", appErr)
+			}
+		})
+	}
+}
