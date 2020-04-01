@@ -540,3 +540,51 @@ func TestPrintTrimmedError(t *testing.T) {
 	printTrimmedError(strings.NewReader("line 1\nline 2\nline 3"), output)
 	assert.Equal(t, "line 3\n", output.String())
 }
+
+func TestTokenParamPrecedence(t *testing.T) {
+    // Reset environment
+    os.Clearenv()
+
+    // Set both token-related environment variables
+    os.Setenv("TOKEN", "from-token-env")
+    os.Setenv("PLUGIN_TOKEN", "from-plugin-token-env")
+
+    // Set token CLI argument
+    set := flag.NewFlagSet("prefer-arg-over-any-env", 0)
+    c := cli.NewContext(nil, set, nil)
+    set.String("token", "from-token-arg", "")
+
+    // token CLI argument takes precedence over either environment variable
+    assert.Equal(t, "from-token-arg", c.String("token"))
+
+    // Reset environment
+    os.Clearenv()
+
+    // Set both token-related environment variables
+    os.Setenv("TOKEN", "from-token-env")
+    os.Setenv("PLUGIN_TOKEN", "from-plugin-token-env")
+
+    // Set CLI arguments without token
+    set = flag.NewFlagSet("prefer-plugin-token-env", 0)
+    c = cli.NewContext(nil, set, nil)
+
+    fmt.Printf("cli: %#v \n", c.Args())
+
+    // PLUGIN_TOKEN environment variable takes precedence over TOKEN environment variable
+    assert.Equal(t, "from-plugin-token-env", c.String("token"))
+
+    // Reset environment
+    os.Clearenv()
+
+    // Set only TOKEN environment variable
+    os.Setenv("TOKEN", "from-token-env")
+
+    // Set without token CLI argument
+    set = flag.NewFlagSet("prefer-token-env", 0)
+    c = cli.NewContext(nil, set, nil)
+
+    // TOKEN environment variable supported without token CLI argument or PLUGIN_TOKEN environment variable
+    assert.Equal(t, c.String("token"), "from-token-env")
+
+    // ...
+}
