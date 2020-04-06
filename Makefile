@@ -185,12 +185,12 @@ run : export PLUGIN_NAMESPACE ?= drone-gke-test
 run : export PLUGIN_REGION ?= $(shell $(gcloud) config get-value compute/region 2>/dev/null)
 run : export PLUGIN_SECRET_TEMPLATE ?= $(CONFIG_HOME)/.kube.sec.yml
 run : export PLUGIN_TEMPLATE ?= $(CONFIG_HOME)/.kube.yml
+run : export PLUGIN_TOKEN ?= $(shell cat $(test_sa_key_path))
 run : export PLUGIN_VARS ?= $(shell cat $(CONFIG_HOME)/vars.json)
 run : export PLUGIN_VERBOSE ?= 1
 run : export PLUGIN_ZONE ?= $(shell $(gcloud) config get-value compute/zone 2>/dev/null)
 run : export SECRET_APP_API_KEY ?= 123
 run : export SECRET_BASE64_P12_CERT ?= "cDEyCg=="
-run : export TOKEN ?= $(shell cat $(test_sa_key_path))
 run : export docker_repo_name ?= $(docker_default_repo_name)
 run : export docker_tag ?= $(docker_default_tag)
 run : export docker_cmd ?=
@@ -208,6 +208,7 @@ run :
 		--env PLUGIN_REGION \
 		--env PLUGIN_SECRET_TEMPLATE \
 		--env PLUGIN_TEMPLATE \
+		--env PLUGIN_TOKEN \
 		--env PLUGIN_VARS \
 		--env PLUGIN_VERBOSE \
 		--env PLUGIN_WAIT_DEPLOYMENTS \
@@ -215,7 +216,6 @@ run :
 		--env PLUGIN_ZONE \
 		--env SECRET_APP_API_KEY \
 		--env SECRET_BASE64_P12_CERT \
-		--env TOKEN \
 		--volume $(CONFIG_HOME):$(CONFIG_HOME) \
 		--workdir $(CONFIG_HOME) \
 		$(docker_repo_name)/$(docker_image_name):$(docker_tag) $(docker_cmd)

@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 type MockedRunner struct {
@@ -481,19 +481,38 @@ func TestApplyManifests(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestWaitForRollout(t *testing.T) {
-	// No error
+// RunWaitForRollout is a helper function for testing WaitForRollout.  For each flag-value
+// in flagValues it will expect a corresponding call of the form:
+// "kubectl rollout status <expected-value> ..."
+func RunWaitForRollout(t *testing.T, specs []string, expectedValues []string) {
 	set := flag.NewFlagSet("test-set", 0)
 	set.Int("wait-seconds", 256, "")
 	set.String("namespace", "test-ns", "")
+	strSlice := cli.StringSlice{}
+	for _, spec := range specs {
+		strSlice.Set(spec)
+	}
+	strSliceFlag := cli.StringSliceFlag{Name: "wait-deployments", Value: &strSlice}
+	strSliceFlag.Apply(set)
 	c := cli.NewContext(nil, set, nil)
-
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"timeout", "-t", "256", "kubectl", "rollout", "status", "deployment", "d1", "--namespace", "test-ns"}).Return(nil)
-	testRunner.On("Run", []string{"timeout", "-t", "256", "kubectl", "rollout", "status", "deployment", "d2", "--namespace", "test-ns"}).Return(nil)
-	err := waitForRollout(c, testRunner, []string{"d1", "d2"})
+	for _, s := range expectedValues {
+		testRunner.On("Run", []string{"timeout", "256", "kubectl", "rollout", "status", s, "--namespace", "test-ns"}).Return(nil)
+	}
+	err := waitForRollout(c, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
+}
+
+func TestWaitForRollout(t *testing.T) {
+	RunWaitForRollout(t, []string{"deployment/d1"}, []string{"deployment/d1"})
+	RunWaitForRollout(t,
+		[]string{"deployment/d1", "statefulset/s1"},
+		[]string{"deployment/d1", "statefulset/s1"})
+	RunWaitForRollout(t, []string{"d1"}, []string{"deployment/d1"})
+	RunWaitForRollout(t,
+		[]string{"d1", "d2"},
+		[]string{"deployment/d1", "deployment/d2"})
 }
 
 func TestApplyArgs(t *testing.T) {
@@ -520,4 +539,78 @@ func TestPrintTrimmedError(t *testing.T) {
 	output.Reset()
 	printTrimmedError(strings.NewReader("line 1\nline 2\nline 3"), output)
 	assert.Equal(t, "line 3\n", output.String())
+}
+
+func TestTokenParamPrecedence(t *testing.T) {
+	for _, tst := range []struct {
+		name           string
+		envToken       string
+		envPluginToken string
+
+		expectedToken string
+		expectedOk    bool
+	}{
+		{
+			name:           "just-plugin-token",
+			envToken:       "",
+			envPluginToken: "token123",
+
+			expectedOk:    true,
+			expectedToken: "token123",
+		},
+		{
+			name:           "just-token",
+			envToken:       "token456",
+			envPluginToken: "",
+
+			expectedOk:    true,
+			expectedToken: "token456",
+		},
+		{
+			name:           "both-and-plugin-token-wins",
+			envToken:       "token456",
+			envPluginToken: "token123",
+			expectedOk:    true,
+			expectedToken: "token123",
+		},
+		{
+			name:           "missing-token",
+			envToken:       "",
+			envPluginToken: "",
+
+			expectedOk:    false,
+			expectedToken: "",
+		},
+	} {
+		t.Run(tst.name, func(t *testing.T) {
+			os.Clearenv()
+			
+			os.Setenv("PLUGIN_REGION", "region-123")
+			os.Setenv("PLUGIN_CLUSTER", "cluster-123")
+
+			if tst.envToken != "" {
+				os.Setenv("TOKEN", tst.envToken)
+			}
+
+			if tst.envPluginToken != "" {
+				os.Setenv("PLUGIN_TOKEN", tst.envPluginToken)
+			}
+
+			appErr := (&cli.App{
+				Flags: getAppFlags(),
+				Action: func(ctx *cli.Context) error {
+					if foundToken := ctx.String("token"); foundToken != tst.expectedToken {
+						return fmt.Errorf("found token: %s, expected: %s", foundToken, tst.expectedToken)
+					}
+					return checkParams(ctx)
+				},
+			}).Run([]string{"run"})
+
+			if tst.expectedOk && appErr != nil {
+				t.Fatalf("expected expectedOk, got appErr: %s", appErr)
+			} else if !tst.expectedOk && appErr == nil {
+				t.Fatalf("expected failure, got appErr: %s", appErr)
+			}
+		})
+	}
 }
