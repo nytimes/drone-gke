@@ -50,7 +50,7 @@ Executing locally from the working directory:
 cd local-example/
 
 # Set to the path of your GCP service account JSON-formatted key file
-export TOKEN=xxx
+export JSON_TOKEN_FILE=xxx
 
 # Set to your cluster
 export PLUGIN_CLUSTER=yyy
@@ -77,11 +77,11 @@ export SECRET_BASE64_P12_CERT="cDEyCg=="
 docker run --rm \
   -e PLUGIN_CLUSTER \
   -e PLUGIN_NAMESPACE \
+  -e PLUGIN_TOKEN="$(cat $JSON_TOKEN_FILE)" \
   -e PLUGIN_VARS \
   -e PLUGIN_ZONE  \
   -e SECRET_APP_API_KEY \
   -e SECRET_BASE64_P12_CERT \
-  -e TOKEN="$(cat $TOKEN)" \
   -v $(pwd):$(pwd) \
   -w $(pwd) \
   nytimes/drone-gke --dry-run --verbose
