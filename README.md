@@ -75,15 +75,15 @@ export SECRET_BASE64_P12_CERT="cDEyCg=="
 
 # Execute the plugin
 docker run --rm \
-  -e PLUGIN_CLUSTER \
-  -e PLUGIN_NAMESPACE \
-  -e PLUGIN_TOKEN="$(cat $JSON_TOKEN_FILE)" \
-  -e PLUGIN_VARS \
-  -e PLUGIN_ZONE  \
-  -e SECRET_APP_API_KEY \
-  -e SECRET_BASE64_P12_CERT \
   -v $(pwd):$(pwd) \
   -w $(pwd) \
+  -e PLUGIN_TOKEN="$(cat $JSON_TOKEN_FILE)" \
+  -e PLUGIN_CLUSTER \
+  -e PLUGIN_ZONE \
+  -e PLUGIN_NAMESPACE \
+  -e PLUGIN_VARS \
+  -e SECRET_APP_API_KEY \
+  -e SECRET_BASE64_P12_CERT \
   nytimes/drone-gke --dry-run --verbose
 
 # Remove --dry-run to deploy
