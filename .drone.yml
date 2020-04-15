@@ -3,7 +3,7 @@ workspace:
   base: /go
   path: src/github.com/nytimes/drone-gke
 
-go_config: &build_config
+go_config: &go_config
   image: golang:1
   environment:
     - GO111MODULE=on
