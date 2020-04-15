@@ -20,11 +20,22 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke:0.9
+    # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
   deploy:
-    image: nytimes/drone-gke:k8s-1.11
+    image: nytimes/drone-gke:0.9
     # ...
 ```
 
@@ -42,6 +53,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      project: my-gcp-project
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -65,6 +89,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      zone: us-east1-b
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -88,6 +125,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      region: us-west-1
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -111,6 +161,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      cluster: prod
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -134,6 +197,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      template: k8s/app.yaml
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -157,6 +233,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      secret_template: my-templates/secrets.yaml
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -181,6 +270,22 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      wait_deployments:
+      - deployment/app
+      - statefulset/memcache
+      - nginx
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -207,6 +312,23 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      wait_seconds: 180
+      wait_deployments:
+      - deployment/app
+      - statefulset/memcache
+      - nginx
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -255,6 +377,22 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      vars:
+        app_name: echo
+        app_image: gcr.io/google_containers/echoserver:1.4
+        env: dev
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -281,6 +419,27 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      # ...
+    environment:
+      # custom secrets; only available within `secret_template`
+      SECRET_APP_API_KEY:
+        from_secret: APP_API_KEY_DEV
+      SECRET_BASE64_P12_CERT:
+        from_secret: BASE64_P12_CERT_DEV
+      # required by `drone-gke`; not available within templates
+      TOKEN: 
+        from_secret: DRONE_GKE_SERVICE_ACCOUNT_KEY_DEV
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -312,6 +471,34 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    environment:
+      # ;)
+      PS1: 'C:${PWD//\//\\\\}>'
+    settings:
+      expand_env_vars: true
+      vars:
+        # CLOUD_SDK_VERSION (set by google/cloud-sdk) will be expanded
+        message: "deployed using gcloud v$${CLOUD_SDK_VERSION}"
+        # PS1 (set using standard drone `environment` field) will be expanded
+        prompt: "cmd.exe $${PS1}"
+        # HOSTNAME and PATH (set by shell) will not be expanded; the `hostnames` and `env` vars are set to non-string values
+        hostnames:
+        - example.com
+        - blog.example.com
+        - "$${HOSTNAME}"
+        env:
+          path: "$${PATH}"
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -320,6 +507,7 @@ pipeline:
     environment:
     # ;)
     - PS1='C:${PWD//\//\\\\}>'
+    expand_env_vars: true
     vars:
       # CLOUD_SDK_VERSION (set by google/cloud-sdk) will be expanded
       message: "deployed using gcloud v$${CLOUD_SDK_VERSION}"
@@ -349,6 +537,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      kubectl_version: "1.14"
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -370,6 +571,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      dry_run: true
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -393,6 +607,19 @@ _**example**_
 
 ```yaml
 # .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      verbose: true
+      # ...
+
+# Drone 0.8
 ---
 pipeline:
   # ...
@@ -479,6 +706,8 @@ vars:
   image: my-image:$${IMAGE_VERSION}
 ```
 
+The equivalent command for Drone 1.0 and above would be: `drone build promote org/repo 5 production -p IMAGE_VERSION=1.0`
+
 The plugin will [expand the environment variable][expand] for the template variable.
 
 To use `$${IMAGE_VERSION}` or `$IMAGE_VERSION`, see the [Drone docs][environment] about preprocessing.
@@ -496,6 +725,12 @@ To run `drone-gke` using a different version of `kubectl` than the default, set 
 For example, to use the **1.14** version of `kubectl`:
 
 ```yml
+# Drone 1.0+
+image: nytimes/drone-gke
+settings:
+  kubectl_version: "1.14"
+
+# Drone 0.8
 image: nytimes/drone-gke
 kubectl_version: "1.14"
 ```
@@ -526,7 +761,67 @@ docker run \
 
 ## Example reference usage
 
-### `.drone.yml`
+### `.drone.yml` for Drone 1.0+
+
+Note particularly the `gke:` build step.
+```yml
+---
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: build
+    image: golang:1.14
+    environment:
+      - GOPATH=/drone
+      - CGO_ENABLED=0
+    commands:
+      - go get -t
+      - go test -v -cover
+      - go build -v -a
+    when:
+      event:
+        - push
+        - pull_request
+
+  - name: gcr
+    image: plugins/gcr
+    registry: us.gcr.io
+    repo: us.gcr.io/my-gke-project/my-app
+    tag: ${DRONE_COMMIT}
+    secrets: [google_credentials]
+    when:
+      event: push
+      branch: master
+
+  - name: gke
+    image: nytimes/drone-gke
+    environment:
+      USER: root
+      TOKEN:
+        from_secret: GOOGLE_CREDENTIALS
+      SECRET_API_TOKEN:
+        from_secret: APP_API_KEY
+      SECRET_BASE64_P12_CERT:
+        from_secret: P12_CERT
+    settings:
+      cluster: my-gke-cluster
+      expand_env_vars: true
+      namespace: ${DRONE_BRANCH}
+      zone: us-central1-a
+      vars:
+        app: my-app
+        env: dev
+        image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
+        user: $${USER}
+    when:
+      event: push
+      branch: master
+```
+
+
+### `.drone.yml` for Drone 0.8 and below
 
 Note particularly the `gke:` build step.
 
@@ -546,6 +841,7 @@ pipeline:
       event:
         - push
         - pull_request
+
   gcr:
     image: plugins/gcr
     registry: us.gcr.io
@@ -583,11 +879,11 @@ pipeline:
 
 ### `.kube.yml`
 
-Note the two Kubernetes yml resource manifests separated by `---`.
+Note the three Kubernetes yml resource manifests separated by `---`.
 
 ```yml
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 
 metadata:
@@ -619,20 +915,27 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-
 metadata:
   name: {{.app}}-{{.env}}
-
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: {{.app}}
     env: {{.env}}
   ports:
-    - name: http
-      protocol: TCP
-      port: 80
+    - port: 80
       targetPort: 8000
+      protocol: TCP
+
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: {{.app}}-{{.env}}
+spec:
+  backend:
+    serviceName: {{.app}}-{{.env}}
+    servicePort: 80
 ```
 
 ### `.kube.sec.yml`
