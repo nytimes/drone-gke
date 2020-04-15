@@ -3,71 +3,54 @@ workspace:
   base: /go
   path: src/github.com/nytimes/drone-gke
 
-build_config: &build_config
+go_config: &build_config
   image: golang:1
   environment:
     - GO111MODULE=on
     - GOPROXY=https://proxy.golang.org
     - CGO_ENABLED=0
-  commands:
-    - go build -a -ldflags "-X main.version=${DRONE_TAG:-other} -X main.rev=${DRONE_COMMIT}"
 
-publish_config: &publish_config
-  image: plugins/docker
-  repo: nytimes/drone-gke
-  dockerfile: Dockerfile
-  secrets:
-    - docker_username
-    - docker_password
+slack_config: &slack_config
+  image: plugins/slack
+  channel: dv-notifications
+  secrets: [slack_webhook]
 
 pipeline:
   test:
-    image: golang:1
-    environment:
-      - GO111MODULE=on
-      - GOPROXY=https://proxy.golang.org
-      - CGO_ENABLED=0
+    <<: *go_config
     commands:
       - go mod download
       - go test -cover -vet all
 
   build:
-    <<: *build_config
+    <<: *go_config
+    commands:
+      - go build -a -ldflags "-X main.version=${DRONE_TAG:-other} -X main.rev=${DRONE_COMMIT}"
     when:
-      branch:
-        - develop
-        - master
+      branch: master
 
   build_release:
-    <<: *build_config
+    <<: *go_config
+    commands:
+      - go build -a -ldflags "-X main.version=${DRONE_TAG:-other} -X main.rev=${DRONE_COMMIT}"
     when:
       event: tag
 
-  publish_develop:
-    <<: *publish_config
-    tags:
-      - "develop"
-    when:
-      event: push
-      branch: develop
-
   publish_release:
-    <<: *publish_config
+    image: plugins/docker
+    repo: nytimes/drone-gke
+    dockerfile: Dockerfile
     auto_tag: true
+    secrets:
+      - docker_username
+      - docker_password
 
   slack:
-    image: plugins/slack
-    channel: dv-notifications
-    secrets: [slack_webhook]
+    <<: *slack_config
     when:
-      branch:
-        - develop
-        - master
+      branch: master
 
   slack_tag:
-    image: plugins/slack
-    channel: dv-notifications
-    secrets: [slack_webhook]
+    <<: *slack_config
     when:
-      event:
-        - tag
+      event: tag

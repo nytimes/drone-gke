@@ -19,8 +19,11 @@ Derive the API endpoints and credentials from the Google credentials and open th
 
 This tool follows [semantic versioning](https://semver.org/).
 
-Use the `x.X` releases for stable use cases (eg 0.8).
-Breaking changes may occur between `x.X` releases (eg 0.7 and 0.8), and will be documented in the [release notes](https://github.com/nytimes/drone-gke/releases).
+Use the minor version (`x.X`) releases for stable use cases (eg 0.9).
+Changes are documented in the [release notes](https://github.com/nytimes/drone-gke/releases).
+
+- Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the image tagged `latest`.
+- Releases will create the images with each major/minor/patch tag values (eg `0.7.1` and `0.7`).
 
 ### Kubernetes API
 
@@ -33,11 +36,6 @@ If you want to use a different version, you can specify the version of `kubectl`
 [sdk]: https://cloud.google.com/sdk/docs/release-notes#23700_2019-03-05
 [version-parameter]: DOCS.md#kubectl_version
 
-### Container
-
-- Pushes to the [`develop`](https://github.com/nytimes/drone-gke/tree/develop) branch will update the image tagged `develop`.
-- Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the image tagged `latest`.
-- Tags to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will create the images with the patch and minor tag values (eg `0.7.1` and `0.7`).
 
 ## Usage
 
