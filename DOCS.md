@@ -784,6 +784,7 @@ steps:
       event:
         - push
         - pull_request
+
   - name: gcr
     image: plugins/gcr
     registry: us.gcr.io
@@ -840,6 +841,7 @@ pipeline:
       event:
         - push
         - pull_request
+
   gcr:
     image: plugins/gcr
     registry: us.gcr.io
