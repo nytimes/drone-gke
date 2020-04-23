@@ -512,6 +512,7 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 	// YAML files path for kubectl
 	for t, content := range mapping {
 		if t == "" {
+			log("Warning: skipping template %s because it was set to be ignored\n", t)
 			continue
 		}
 
