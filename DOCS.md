@@ -227,7 +227,7 @@ _**default**_ `'.kube.sec.yml'`
 
 _**description**_ path to Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template
 
-_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package
+_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package. The plugin will skip attempting to parse/apply a secrets manifest if this is set to an empty string (`""`).
 
 _**example**_
 
