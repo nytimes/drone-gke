@@ -368,6 +368,43 @@ func TestRenderTemplates(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestParseSkips(t *testing.T) {
+	kubeTemplatePath := "/tmp/drone-gke-tests/.kube.yml"
+	secretTemplatePath := "/tmp/drone-gke-tests/.kube.sec.yml"
+
+	// Test no skip
+	set := flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", kubeTemplatePath, "")
+	set.String("secret-template", secretTemplatePath, "")
+	c := cli.NewContext(nil, set, nil)
+	err := parseSkips(c)
+	assert.NoError(t, err)
+	assert.Equal(t, kubeTemplatePath, c.String("kube-template"))
+	assert.Equal(t, secretTemplatePath, c.String("secret-template"))
+
+	// Test skip template
+	kubeSet := flag.NewFlagSet("kube-set", 0)
+	kubeSet.String("kube-template", kubeTemplatePath, "")
+	kubeSet.String("secret-template", secretTemplatePath, "")
+	kubeSet.Bool("skip-kube-template", true, "")
+	c = cli.NewContext(nil, kubeSet, nil)
+	err = parseSkips(c)
+	assert.NoError(t, err)
+	assert.Empty(t, c.String("kube-template"))
+	assert.Equal(t, secretTemplatePath, c.String("secret-template"))
+
+	// Test skip template
+	secretSet := flag.NewFlagSet("secret-set", 0)
+	secretSet.String("kube-template", kubeTemplatePath, "")
+	secretSet.String("secret-template", secretTemplatePath, "")
+	secretSet.Bool("skip-secret-template", true, "")
+	c = cli.NewContext(nil, secretSet, nil)
+	err = parseSkips(c)
+	assert.NoError(t, err)
+	assert.Equal(t, kubeTemplatePath, c.String("kube-template"))
+	assert.Empty(t, c.String("secret-template"))
+}
+
 func TestPrintKubectlVersion(t *testing.T) {
 	testRunner := new(MockedRunner)
 	testRunner.On("Run", []string{"kubectl", "version"}).Return(nil)
