@@ -214,7 +214,13 @@ func run(c *cli.Context) error {
 		}
 	}
 
-	// Use custom kubectl version if provided
+	// Parse skipping template processing.
+	err := parseSkips(c)
+	if err != nil {
+		return err
+	}
+
+	// Use custom kubectl version if provided.
 	kubectlVersion := c.String("kubectl-version")
 	if kubectlVersion != "" {
 		kubectlCmd = fmt.Sprintf("%s.%s", kubectlCmdName, kubectlVersion)
@@ -359,6 +365,31 @@ func getProjectFromToken(j string) string {
 		return ""
 	}
 	return t.ProjectID
+}
+
+// parseSkips determines which templates will be processed.
+// Prior in Drone 0.8 we allowed setting template filenames to an empty string "" to skip processing them.
+// As of Drone 1.7, env vars that have an empty string as the value are dropped.
+// So we need to use and check the new set of flags to determine if the user wants to skip processing a template file.
+func parseSkips(c *cli.Context) error {
+	if c.Bool("skip-kube-template") {
+		log("Warning: skipping kube-template because it was set to be ignored\n")
+		if err := c.Set("kube-template", ""); err != nil {
+			return err
+		}
+	}
+	if c.Bool("skip-secret-template") {
+		log("Warning: skipping secret-template because it was set to be ignored\n")
+		if err := c.Set("secret-template", ""); err != nil {
+			return err
+		}
+	}
+
+	if c.Bool("skip-kube-template") && c.Bool("skip-secret-template") {
+		return fmt.Errorf("Error: skipping both templates ends the plugin execution")
+	}
+
+	return nil
 }
 
 // parseVars parses vars (in JSON) and returns a map
