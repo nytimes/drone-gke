@@ -104,7 +104,7 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:    "kube-template",
-			Usage:   "optional - template for Kubernetes resources, e.g. deployments",
+			Usage:   "optional - template for Kubernetes resources, e.g. Deployments",
 			EnvVars: []string{"PLUGIN_TEMPLATE"},
 			Value:   ".kube.yml",
 		},
