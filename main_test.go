@@ -607,8 +607,8 @@ func TestTokenParamPrecedence(t *testing.T) {
 			name:           "both-and-plugin-token-wins",
 			envToken:       "token456",
 			envPluginToken: "token123",
-			expectedOk:    true,
-			expectedToken: "token123",
+			expectedOk:     true,
+			expectedToken:  "token123",
 		},
 		{
 			name:           "missing-token",
@@ -621,7 +621,7 @@ func TestTokenParamPrecedence(t *testing.T) {
 	} {
 		t.Run(tst.name, func(t *testing.T) {
 			os.Clearenv()
-			
+
 			os.Setenv("PLUGIN_REGION", "region-123")
 			os.Setenv("PLUGIN_CLUSTER", "cluster-123")
 
