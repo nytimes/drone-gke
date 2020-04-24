@@ -104,15 +104,25 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:    "kube-template",
-			Usage:   "optional - template for Kubernetes resources, e.g. deployments",
+			Usage:   "template for Kubernetes resources, e.g. deployments",
 			EnvVars: []string{"PLUGIN_TEMPLATE"},
 			Value:   ".kube.yml",
 		},
+		&cli.BoolFlag{
+			Name:    "skip-kube-template",
+			Usage:   "do not parse or apply the kube template",
+			EnvVars: []string{"PLUGIN_SKIP_TEMPLATE"},
+		},
 		&cli.StringFlag{
 			Name:    "secret-template",
-			Usage:   "optional - template for Kubernetes Secret resources",
+			Usage:   "template for Kubernetes Secret resources",
 			EnvVars: []string{"PLUGIN_SECRET_TEMPLATE"},
 			Value:   ".kube.sec.yml",
+		},
+		&cli.BoolFlag{
+			Name:    "skip-secret-template",
+			Usage:   "do not parse or apply the secret template",
+			EnvVars: []string{"PLUGIN_SKIP_SECRET_TEMPLATE"},
 		},
 		&cli.StringFlag{
 			Name:    "vars",
