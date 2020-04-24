@@ -74,12 +74,12 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:    "token",
-			Usage:   "service account's JSON credentials",
+			Usage:   "service account's `JSON` credentials",
 			EnvVars: []string{"PLUGIN_TOKEN", "TOKEN"},
 		},
 		&cli.StringFlag{
 			Name:    "project",
-			Usage:   "GCP project name",
+			Usage:   "GCP project name (default: interpreted from JSON credentials)",
 			EnvVars: []string{"PLUGIN_PROJECT"},
 		},
 		&cli.StringFlag{
@@ -116,7 +116,7 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:    "vars",
-			Usage:   "variables to use while templating manifests",
+			Usage:   "variables to use while templating manifests in `JSON` form",
 			EnvVars: []string{"PLUGIN_VARS"},
 		},
 		&cli.BoolFlag{
@@ -146,7 +146,7 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.StringSliceFlag{
 			Name:    "wait-deployments",
-			Usage:   "list of Deployments to wait for successful rollout, using kubectl rollout status",
+			Usage:   "list of Deployments to wait for successful rollout using kubectl rollout status in `JSON` form",
 			EnvVars: []string{"PLUGIN_WAIT_DEPLOYMENTS"},
 		},
 		&cli.IntFlag{
@@ -159,7 +159,6 @@ func getAppFlags() []cli.Flag {
 			Name:    "kubectl-version",
 			Usage:   "optional - version of kubectl binary to use, e.g. 1.14",
 			EnvVars: []string{"PLUGIN_KUBECTL_VERSION"},
-			Value:   "",
 		},
 	}
 }
