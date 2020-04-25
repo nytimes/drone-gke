@@ -219,6 +219,44 @@ pipeline:
     # ...
 ```
 
+### `skip_template`
+
+_**type**_ `bool`
+
+_**default**_ `false`
+
+_**description**_ parse and apply the Kubernetes manifest template
+
+_**notes**_ turn off the use of the template, regardless if the file exists or not
+
+_**example**_
+
+```yaml
+# .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      template: k8s/app.yaml
+      skip_template: true
+      # ...
+
+# Drone 0.8
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    template: k8s/app.yaml
+    skip_template: true
+    # ...
+```
+
 ### `secret_template`
 
 _**type**_ `string`
@@ -252,6 +290,44 @@ pipeline:
   deploy:
     image: nytimes/drone-gke
     secret_template: my-templates/secrets.yaml
+    # ...
+```
+
+### `skip_secret_template`
+
+_**type**_ `bool`
+
+_**default**_ `false`
+
+_**description**_ parse and apply the Kubernetes _Secret_ resource manifest template
+
+_**notes**_ turn off the use of the template, regardless if the file exists or not
+
+_**example**_
+
+```yaml
+# .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      secret_template: my-templates/secrets.yaml
+      skip_secret_template: true
+      # ...
+
+# Drone 0.8
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    secret_template: my-templates/secrets.yaml
+    skip_secret_template: true
     # ...
 ```
 
