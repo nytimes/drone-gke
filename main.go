@@ -116,7 +116,7 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:    "vars",
-			Usage:   "variables to use while templating manifests in `JSON` form",
+			Usage:   "variables to use while templating manifests in `JSON` format",
 			EnvVars: []string{"PLUGIN_VARS"},
 		},
 		&cli.BoolFlag{
