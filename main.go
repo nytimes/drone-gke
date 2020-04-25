@@ -109,7 +109,7 @@ func getAppFlags() []cli.Flag {
 			Value:   ".kube.yml",
 		},
 		&cli.BoolFlag{
-			Name:    "skip-kube-template",
+			Name:    "skip-template",
 			Usage:   "do not parse or apply the kube template",
 			EnvVars: []string{"PLUGIN_SKIP_TEMPLATE"},
 		},
@@ -372,7 +372,7 @@ func getProjectFromToken(j string) string {
 // As of Drone 1.7, env vars that have an empty string as the value are dropped.
 // So we need to use and check the new set of flags to determine if the user wants to skip processing a template file.
 func parseSkips(c *cli.Context) error {
-	if c.Bool("skip-kube-template") {
+	if c.Bool("skip-template") {
 		log("Warning: skipping kube-template because it was set to be ignored\n")
 		if err := c.Set("kube-template", ""); err != nil {
 			return err
@@ -385,7 +385,7 @@ func parseSkips(c *cli.Context) error {
 		}
 	}
 
-	if c.Bool("skip-kube-template") && c.Bool("skip-secret-template") {
+	if c.Bool("skip-template") && c.Bool("skip-secret-template") {
 		return fmt.Errorf("Error: skipping both templates ends the plugin execution")
 	}
 
