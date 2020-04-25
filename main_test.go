@@ -382,6 +382,13 @@ func TestParseSkips(t *testing.T) {
 	assert.Equal(t, kubeTemplatePath, c.String("kube-template"))
 	assert.Equal(t, secretTemplatePath, c.String("secret-template"))
 
+	// Test skipping both
+	set.Bool("skip-template", true, "")
+	set.Bool("skip-secret-template", true, "")
+	c = cli.NewContext(nil, set, nil)
+	err = parseSkips(c)
+	assert.Error(t, err)
+
 	// Test skip template
 	kubeSet := flag.NewFlagSet("kube-set", 0)
 	kubeSet.String("kube-template", kubeTemplatePath, "")
