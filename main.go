@@ -563,7 +563,7 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 				return nil, fmt.Errorf("Error finding template: %s\n", err)
 			}
 
-			log("Warning: skipping optional template %s because it was not found\n", t)
+			log("Warning: skipping optional secret template %s because it was not found\n", t)
 			continue
 		}
 
