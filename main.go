@@ -386,7 +386,7 @@ func parseSkips(c *cli.Context) error {
 	}
 
 	if c.Bool("skip-template") && c.Bool("skip-secret-template") {
-		return fmt.Errorf("Error: skipping both templates ends the plugin execution")
+		return fmt.Errorf("Error: skipping both templates ends the plugin execution\n")
 	}
 
 	return nil
@@ -553,7 +553,6 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 	// YAML files path for kubectl
 	for t, content := range mapping {
 		if t == "" {
-			log("Warning: skipping template %s because it was set to be ignored\n", t)
 			continue
 		}
 
