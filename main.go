@@ -110,7 +110,7 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:    "skip-template",
-			Usage:   "do not parse or apply the kube template",
+			Usage:   "do not parse or apply the Kubernetes template",
 			EnvVars: []string{"PLUGIN_SKIP_TEMPLATE"},
 		},
 		&cli.StringFlag{
@@ -121,7 +121,7 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:    "skip-secret-template",
-			Usage:   "do not parse or apply the secret template",
+			Usage:   "do not parse or apply the Kubernetes Secret template",
 			EnvVars: []string{"PLUGIN_SKIP_SECRET_TEMPLATE"},
 		},
 		&cli.StringFlag{
