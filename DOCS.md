@@ -191,7 +191,8 @@ _**default**_ `'.kube.yml'`
 
 _**description**_ path to Kubernetes manifest template
 
-_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package
+_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package.
+If the file does not exist, set `skip_template` to `true`.
 
 _**example**_
 
@@ -265,7 +266,8 @@ _**default**_ `'.kube.sec.yml'`
 
 _**description**_ path to Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template
 
-_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package
+_**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package.
+If the file does not exist, set `skip_secret_template` to `true`.
 
 _**example**_
 
