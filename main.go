@@ -146,7 +146,7 @@ func getAppFlags() []cli.Flag {
 		},
 		&cli.StringSliceFlag{
 			Name:    "wait-deployments",
-			Usage:   "list of Deployments to wait for successful rollout using kubectl rollout status in `JSON` form",
+			Usage:   "list of Deployments to wait for successful rollout using kubectl rollout status in `JSON` format",
 			EnvVars: []string{"PLUGIN_WAIT_DEPLOYMENTS"},
 		},
 		&cli.IntFlag{
