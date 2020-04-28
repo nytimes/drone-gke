@@ -368,6 +368,50 @@ func TestRenderTemplates(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestParseSkips(t *testing.T) {
+	kubeTemplatePath := "/tmp/drone-gke-tests/.kube.yml"
+	secretTemplatePath := "/tmp/drone-gke-tests/.kube.sec.yml"
+
+	// Test no skip
+	set := flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", kubeTemplatePath, "")
+	set.String("secret-template", secretTemplatePath, "")
+	c := cli.NewContext(nil, set, nil)
+	err := parseSkips(c)
+	assert.NoError(t, err)
+	assert.Equal(t, kubeTemplatePath, c.String("kube-template"))
+	assert.Equal(t, secretTemplatePath, c.String("secret-template"))
+
+	// Test skipping both
+	set.Bool("skip-template", true, "")
+	set.Bool("skip-secret-template", true, "")
+	c = cli.NewContext(nil, set, nil)
+	err = parseSkips(c)
+	assert.Error(t, err)
+
+	// Test skip template
+	kubeSet := flag.NewFlagSet("kube-set", 0)
+	kubeSet.String("kube-template", kubeTemplatePath, "")
+	kubeSet.String("secret-template", secretTemplatePath, "")
+	kubeSet.Bool("skip-template", true, "")
+	c = cli.NewContext(nil, kubeSet, nil)
+	err = parseSkips(c)
+	assert.NoError(t, err)
+	assert.Empty(t, c.String("kube-template"))
+	assert.Equal(t, secretTemplatePath, c.String("secret-template"))
+
+	// Test skip template
+	secretSet := flag.NewFlagSet("secret-set", 0)
+	secretSet.String("kube-template", kubeTemplatePath, "")
+	secretSet.String("secret-template", secretTemplatePath, "")
+	secretSet.Bool("skip-secret-template", true, "")
+	c = cli.NewContext(nil, secretSet, nil)
+	err = parseSkips(c)
+	assert.NoError(t, err)
+	assert.Equal(t, kubeTemplatePath, c.String("kube-template"))
+	assert.Empty(t, c.String("secret-template"))
+}
+
 func TestPrintKubectlVersion(t *testing.T) {
 	testRunner := new(MockedRunner)
 	testRunner.On("Run", []string{"kubectl", "version"}).Return(nil)
@@ -570,8 +614,8 @@ func TestTokenParamPrecedence(t *testing.T) {
 			name:           "both-and-plugin-token-wins",
 			envToken:       "token456",
 			envPluginToken: "token123",
-			expectedOk:    true,
-			expectedToken: "token123",
+			expectedOk:     true,
+			expectedToken:  "token123",
 		},
 		{
 			name:           "missing-token",
@@ -584,7 +628,7 @@ func TestTokenParamPrecedence(t *testing.T) {
 	} {
 		t.Run(tst.name, func(t *testing.T) {
 			os.Clearenv()
-			
+
 			os.Setenv("PLUGIN_REGION", "region-123")
 			os.Setenv("PLUGIN_CLUSTER", "cluster-123")
 
