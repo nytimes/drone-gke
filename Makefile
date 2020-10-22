@@ -20,7 +20,7 @@ git_current_branch = $(shell $(git) rev-parse --abbrev-ref HEAD)
 git_current_revision = $(shell $(git) rev-parse --short HEAD)
 
 # plugin's docker options
-docker_default_repo_name = nytimes
+docker_default_repo_name = websend
 docker_image_name = drone-gke
 docker_default_tag = latest
 ifneq ($(git_current_branch), $(git_default_branch))
@@ -214,6 +214,8 @@ run :
 		--env PLUGIN_WAIT_DEPLOYMENTS \
 		--env PLUGIN_WAIT_SECONDS \
 		--env PLUGIN_ZONE \
+		--env PLUGIN_SKIP_FETCH_CREDENTIALS \
+		--env PLUGIN_KUBECONFIG \
 		--env SECRET_APP_API_KEY \
 		--env SECRET_BASE64_P12_CERT \
 		--volume $(CONFIG_HOME):$(CONFIG_HOME) \

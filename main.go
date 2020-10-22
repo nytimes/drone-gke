@@ -97,6 +97,16 @@ func getAppFlags() []cli.Flag {
 			Usage:   "name of the container cluster",
 			EnvVars: []string{"PLUGIN_CLUSTER"},
 		},
+		&cli.BoolFlag{
+			Name:    "skip-fetch-credentials",
+			Usage:   "do not fetch cluster credentials",
+			EnvVars: []string{"PLUGIN_SKIP_FETCH_CREDENTIALS"},
+		},
+		&cli.StringFlag{
+			Name:    "kubeconfig",
+			Usage:   "kubectl config file",
+			EnvVars: []string{"PLUGIN_KUBECONFIG"},
+		},
 		&cli.StringFlag{
 			Name:    "namespace",
 			Usage:   "Kubernetes namespace to operate in",
@@ -203,9 +213,11 @@ func run(c *cli.Context) error {
 		return err
 	}
 
+	skipFetchCredentials := c.Bool("skip-fetch-credentials")
+
 	// Use project if explicitly stated, otherwise infer from the service account token.
 	project := c.String("project")
-	if project == "" {
+	if project == "" && !skipFetchCredentials {
 		log("Parsing Project ID from credentials\n")
 		project = getProjectFromToken(c.String("token"))
 		if project == "" {
@@ -241,9 +253,13 @@ func run(c *cli.Context) error {
 	environ = append(environ, fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", keyPath))
 	runner := NewBasicRunner("", environ, os.Stdout, os.Stderr)
 
-	// Auth with gcloud and fetch kubectl credentials
-	if err := fetchCredentials(c, project, runner); err != nil {
-		return err
+	if skipFetchCredentials {
+		// Load kubeconfig from environment
+	} else {
+		// Auth with gcloud and fetch kubectl credentials
+		if err := fetchCredentials(c, project, runner); err != nil {
+			return err
+		}
 	}
 
 	// Delete credentials from filesystem when finishing
@@ -310,20 +326,28 @@ func run(c *cli.Context) error {
 
 // checkParams checks required params
 func checkParams(c *cli.Context) error {
-	if c.String("token") == "" {
-		return fmt.Errorf("Missing required param: token")
-	}
+	skipFetchCredentials := c.Bool("skip-fetch-credentials")
 
-	if c.String("zone") == "" && c.String("region") == "" {
-		return fmt.Errorf("Missing required param: at least one of region or zone must be specified")
-	}
+	if skipFetchCredentials {
+		if c.String("kubeconfig") == "" {
+			return fmt.Errorf("Missing required param: kubeconfig")
+		}
+	} else {
+		if c.String("token") == "" {
+			return fmt.Errorf("Missing required param: token")
+		}
 
-	if c.String("zone") != "" && c.String("region") != "" {
-		return fmt.Errorf("Invalid params: at most one of region or zone may be specified")
-	}
+		if c.String("zone") == "" && c.String("region") == "" {
+			return fmt.Errorf("Missing required param: at least one of region or zone must be specified")
+		}
 
-	if c.String("cluster") == "" {
-		return fmt.Errorf("Missing required param: cluster")
+		if c.String("zone") != "" && c.String("region") != "" {
+			return fmt.Errorf("Invalid params: at most one of region or zone may be specified")
+		}
+
+		if c.String("cluster") == "" {
+			return fmt.Errorf("Missing required param: cluster")
+		}
 	}
 
 	if err := validateKubectlVersion(c, extraKubectlVersions); err != nil {
