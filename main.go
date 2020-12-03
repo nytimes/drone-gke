@@ -300,6 +300,10 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("Error (kubectl output redacted): %s\n", err)
 	}
 
+	if c.Bool("dry-run") {
+		log("Not waiting for rollout, this was a dry-run\n")
+		return nil
+	}
 	// Wait for rollout to finish
 	if err := waitForRollout(c, runner); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
@@ -697,11 +701,11 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 
 // waitForRollout executes kubectl to wait for rollout to complete before continuing
 func waitForRollout(c *cli.Context, runner Runner) error {
-
 	namespace := c.String("namespace")
 	waitSeconds := c.Int("wait-seconds")
 	specs := c.StringSlice("wait-deployments")
 	waitDeployments := []string{}
+
 	for _, spec := range specs {
 		// default type to "deployment" if not present
 		deployment := spec
