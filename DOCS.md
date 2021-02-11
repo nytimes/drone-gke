@@ -47,7 +47,7 @@ _**default**_ `''`
 
 _**description**_ GCP project ID; owner of the GKE cluster
 
-_**notes**_ default inferred from the service account credentials provided via [`token`](#token)
+_**notes**_ default inferred from the service account credentials provided via [`token`](#service-account-credentials)
 
 _**example**_
 
