@@ -510,6 +510,10 @@ func templateData(c *cli.Context, project string, vars map[string]interface{}, s
 	secretsData := map[string]interface{}{}
 	secretsDataRedacted := map[string]string{}
 
+	for k, v := range templateData {
+		secretsData[k] = v
+	}
+
 	// Add variables to data used for rendering both templates.
 	for k, v := range vars {
 		// Don't allow vars to be overridden.
