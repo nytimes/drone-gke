@@ -491,7 +491,7 @@ _**default**_ `{}`
 
 _**description**_ variables to use in [`secret_template`](#secret_template); credentials for `drone-gke`
 
-_**notes**_ `TOKEN` is required; see ["Using secrets"](#using-secrets) for details
+_**notes**_ `TOKEN` is required; `SECRET_` prefix is required - see ["Using secrets"](#using-secrets) for details
 
 _**example**_
 
