@@ -241,6 +241,14 @@ func TestTemplateData(t *testing.T) {
 	}, tmplData)
 
 	assert.Equal(t, map[string]interface{}{
+		"BRANCH":       "master",
+		"BUILD_NUMBER": "2",
+		"COMMIT":       "e0f21b90a",
+		"TAG":          "v0.0.0",
+		"project":      "test-project",
+		"zone":         "us-east1-b",
+		"cluster":      "cluster-0",
+		"namespace":    "",
 		"key0":        "val0",
 		"key1":        "hello $USER",
 		"SECRET_TEST": "test_val",
@@ -298,6 +306,14 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 	}, tmplData)
 
 	assert.Equal(t, map[string]interface{}{
+		"BRANCH":       "master",
+		"BUILD_NUMBER": "2",
+		"COMMIT":       "e0f21b90a",
+		"TAG":          "v0.0.0",
+		"project":      "test-project",
+		"zone":         "us-east1-b",
+		"cluster":      "cluster-0",
+		"namespace":    "",
 		"key0":        "val0",
 		"key1":        "hello drone-user",
 		"SECRET_TEST": "test_val",
@@ -333,7 +349,11 @@ func TestRenderTemplates(t *testing.T) {
 		"COMMIT": "e0f21b90a",
 		"key0":   "val0",
 	}
-	secretsData := map[string]interface{}{"SECRET_TEST": "test_sec_val"}
+	secretsData := map[string]interface{}{
+		"COMMIT": "e0f21b90a",
+		"key0":   "val0",
+		"SECRET_TEST": "test_sec_val",
+	}
 
 	// No template file, should error
 	os.Remove(kubeTemplatePath)
@@ -346,7 +366,7 @@ func TestRenderTemplates(t *testing.T) {
 	tmplBuf := []byte("{{.COMMIT}}-{{.key0}}")
 	err = ioutil.WriteFile(kubeTemplatePath, tmplBuf, 0600)
 	assert.NoError(t, err)
-	tmplBuf = []byte("{{.SECRET_TEST}}")
+	tmplBuf = []byte("{{.COMMIT}}-{{.SECRET_TEST}}")
 	err = ioutil.WriteFile(secretTemplatePath, tmplBuf, 0600)
 	assert.NoError(t, err)
 
@@ -359,7 +379,7 @@ func TestRenderTemplates(t *testing.T) {
 	assert.Equal(t, "e0f21b90a-val0", string(buf))
 
 	buf, err = ioutil.ReadFile(manifestPaths[secretTemplatePath])
-	assert.Equal(t, "test_sec_val", string(buf))
+	assert.Equal(t, "e0f21b90a-test_sec_val", string(buf))
 
 	// Secret variables shouldn't be available in kube template
 	tmplBuf = []byte("{{.SECRET_TEST}}")
