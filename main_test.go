@@ -249,9 +249,9 @@ func TestTemplateData(t *testing.T) {
 		"zone":         "us-east1-b",
 		"cluster":      "cluster-0",
 		"namespace":    "",
-		"key0":        "val0",
-		"key1":        "hello $USER",
-		"SECRET_TEST": "test_val",
+		"key0":         "val0",
+		"key1":         "hello $USER",
+		"SECRET_TEST":  "test_val",
 	}, secretsData)
 	assert.Equal(t, map[string]string{"SECRET_TEST": "VALUE REDACTED"}, secretsDataRedacted)
 	assert.NoError(t, err)
@@ -314,9 +314,9 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 		"zone":         "us-east1-b",
 		"cluster":      "cluster-0",
 		"namespace":    "",
-		"key0":        "val0",
-		"key1":        "hello drone-user",
-		"SECRET_TEST": "test_val",
+		"key0":         "val0",
+		"key1":         "hello drone-user",
+		"SECRET_TEST":  "test_val",
 	}, secretsData)
 	assert.Equal(t, map[string]string{"SECRET_TEST": "VALUE REDACTED"}, secretsDataRedacted)
 	assert.NoError(t, err)
@@ -350,8 +350,8 @@ func TestRenderTemplates(t *testing.T) {
 		"key0":   "val0",
 	}
 	secretsData := map[string]interface{}{
-		"COMMIT": "e0f21b90a",
-		"key0":   "val0",
+		"COMMIT":      "e0f21b90a",
+		"key0":        "val0",
 		"SECRET_TEST": "test_sec_val",
 	}
 
@@ -485,7 +485,7 @@ func TestSetNamespace(t *testing.T) {
 
 	testRunner = new(MockedRunner)
 	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "feature-1892-test-ns"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run", "--filename", "/tmp/namespace.json"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/tmp/namespace.json"}).Return(nil)
 	err = setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -505,8 +505,8 @@ func TestApplyManifests(t *testing.T) {
 	}
 
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
 	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/path/to/kube-tamplate"}).Return(nil)
 	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/path/to/secret-tamplate"}).Return(nil)
 	err := applyManifests(c, manifestPaths, testRunner, testRunner)
@@ -519,7 +519,7 @@ func TestApplyManifests(t *testing.T) {
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
 	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/path/to/kube-tamplate"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
@@ -538,8 +538,8 @@ func TestApplyManifests(t *testing.T) {
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -584,7 +584,7 @@ func TestApplyArgs(t *testing.T) {
 	assert.Equal(t, []string{"apply", "--record", "--filename", "/path/to/file/1"}, args)
 
 	args = applyArgs(true, "/path/to/file/2")
-	assert.Equal(t, []string{"apply", "--record", "--dry-run", "--filename", "/path/to/file/2"}, args)
+	assert.Equal(t, []string{"apply", "--record", "--dry-run=client", "--filename", "/path/to/file/2"}, args)
 }
 
 func TestPrintTrimmedError(t *testing.T) {
