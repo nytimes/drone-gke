@@ -758,7 +758,7 @@ func applyArgs(dryrun bool, file string) []string {
 	}
 
 	if dryrun {
-		args = append(args, "--dry-run")
+		args = append(args, "--dry-run=client")
 	}
 
 	args = append(args, "--filename")
