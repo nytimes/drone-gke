@@ -39,6 +39,42 @@ pipeline:
     # ...
 ```
 
+### `namespace`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ Kubernetes namespace to operate in
+
+_**notes**_ sets the context for kubectl
+
+_**example**_
+
+```yaml
+# .drone.yml
+
+# Drone 1.0+
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      namespace: my-app
+      # ...
+
+# Drone 0.8
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    namespace: my-app
+    # ...
+```
+
 ### `project`
 
 _**type**_ `string`
