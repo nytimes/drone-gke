@@ -38,6 +38,9 @@ const (
 	keyPath          = "/tmp/gcloud.json"
 	nsPath           = "/tmp/namespace.json"
 	templateBasePath = "/tmp"
+
+	dryRunFlagPre118  = "--dry-run=true"
+	dryRunFlagDefault = "--dry-run=client"
 )
 
 // default to kubectlCmdName, can be overriden via kubectl-version param
@@ -51,6 +54,7 @@ metadata:
   name: %s
 `
 var invalidNameRegex = regexp.MustCompile(`[^a-z0-9\.\-]+`)
+var dryRunFlag = dryRunFlagDefault
 
 func main() {
 	err := wrapMain()
@@ -225,6 +229,13 @@ func run(c *cli.Context) error {
 		kubectlCmd = fmt.Sprintf("%s.%s", kubectlCmdName, kubectlVersion)
 	}
 
+	// Parse and adjust the dry-run flag if needed
+	var dryRunBuffer bytes.Buffer
+	dryRunRunner := NewBasicRunner("/", []string{}, &dryRunBuffer, &dryRunBuffer)
+	if err := setDryRunFlag(dryRunRunner, &dryRunBuffer); err != nil {
+		return err
+	}
+
 	// Parse variables and secrets
 	vars, err := parseVars(c)
 	if err != nil {
@@ -393,6 +404,52 @@ func parseSkips(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+// setDryRunFlag sets the value of the dry-run flag for the version of kubectl
+// that is being used
+func setDryRunFlag(runner Runner, output io.Reader) error {
+	dryRunFlag = dryRunFlagDefault
+	version, err := getMinorVersion(runner, output)
+	if err != nil {
+		return fmt.Errorf("Error determining which kubectl version is running: %v", err)
+	}
+	// default is the >= 1.18 flag
+	if version < 18 {
+		dryRunFlag = dryRunFlagPre118
+	}
+	return nil
+}
+
+// getMinorVersion fetches and parses the version from kubectl
+func getMinorVersion(runner Runner, output io.Reader) (int64, error) {
+	runner.Run(kubectlCmd, "version", "--client", "-o=json")
+	data, err := ioutil.ReadAll(output)
+	if err != nil {
+		return 0, fmt.Errorf("Error reading kubectl version: %v", err)
+	}
+
+	var versionOutput struct {
+		ClientVersion struct {
+			Minor string
+		}
+	}
+
+	err = json.Unmarshal(data, &versionOutput)
+	if err != nil {
+		return 0, fmt.Errorf("Error reading kubectl version: %v", err)
+	}
+
+	versionString, err := strings.Replace(versionOutput.ClientVersion.Minor, "+", "", 1), nil
+	if err != nil {
+		return 0, fmt.Errorf("Error removing extra '+' from version string: %v", err)
+	}
+
+	versionInt, err := strconv.ParseInt(versionString, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("Couldn't parse minor version from string: %v", err)
+	}
+	return versionInt, nil
 }
 
 // parseVars parses vars (in JSON) and returns a map
@@ -758,7 +815,7 @@ func applyArgs(dryrun bool, file string) []string {
 	}
 
 	if dryrun {
-		args = append(args, "--dry-run=client")
+		args = append(args, dryRunFlag)
 	}
 
 	args = append(args, "--filename")
