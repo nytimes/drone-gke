@@ -678,3 +678,163 @@ func TestTokenParamPrecedence(t *testing.T) {
 		})
 	}
 }
+
+func TestSetDryRunFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		versionCommandOutput string
+		explicitVersion string
+
+		expectedFlag string
+	}{
+		{
+			name: "default-1.17",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "17+",
+					"gitVersion": "v1.17.17-dispatcher",
+					"gitCommit": "a39a896b5018d0c800124a36757433c660fd0880",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-28T21:47:26Z",
+					"goVersion": "go1.13.9",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "",
+			expectedFlag: dryRunFlagPre118,
+		},
+		{
+			name: "kubectl-1.15",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "15",
+					"gitVersion": "v1.15.12",
+					"gitCommit": "e2a822d9f3c2fdb5c9bfbe64313cf9f657f0a725",
+					"gitTreeState": "clean",
+					"buildDate": "2020-05-06T05:17:59Z",
+					"goVersion": "go1.12.17",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.15",
+			expectedFlag: dryRunFlagPre118,
+		},
+		{
+			name: "kubectl-1.16",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "16",
+					"gitVersion": "v1.16.15",
+					"gitCommit": "2adc8d7091e89b6e3ca8d048140618ec89b39369",
+					"gitTreeState": "clean",
+					"buildDate": "2020-09-02T11:40:00Z",
+					"goVersion": "go1.13.15",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.16",
+			expectedFlag: dryRunFlagPre118,
+		},
+		{
+			name: "kubectl-1.17",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "17",
+					"gitVersion": "v1.17.17",
+					"gitCommit": "f3abc15296f3a3f54e4ee42e830c61047b13895f",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-13T13:21:12Z",
+					"goVersion": "go1.13.15",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.17",
+			expectedFlag: dryRunFlagPre118,
+		},
+		{
+			name: "kubectl-1.18",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "18",
+					"gitVersion": "v1.18.15",
+					"gitCommit": "73dd5c840662bb066a146d0871216333181f4b64",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-13T13:22:41Z",
+					"goVersion": "go1.13.15",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.18",
+			expectedFlag: dryRunFlagDefault,
+		},
+		{
+			name: "kubectl-1.19",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "19",
+					"gitVersion": "v1.19.7",
+					"gitCommit": "1dd5338295409edcfff11505e7bb246f0d325d15",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-13T13:23:52Z",
+					"goVersion": "go1.15.5",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.19",
+			expectedFlag: dryRunFlagDefault,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			os.Clearenv()
+
+			os.Setenv("PLUGIN_KUBECTL_VERSION", test.explicitVersion)
+
+			err := (&cli.App{
+				Flags: getAppFlags(),
+				Action: func(ctx *cli.Context) error {
+					// setup
+
+					// copied from lines 227-230 of main.go
+					kubectlVersion := ctx.String("kubectl-version")
+					if kubectlVersion != "" {
+						kubectlCmd = fmt.Sprintf("%s.%s", kubectlCmdName, kubectlVersion)
+					}
+
+					buf := bytes.NewBufferString(test.versionCommandOutput)
+					testRunner := new(MockedRunner)
+					if test.explicitVersion != "" {
+						testRunner.On("Run", []string{fmt.Sprintf("kubectl.%s", test.explicitVersion), "version", "--client", "-o=json"}).Return(nil)
+					} else {
+						testRunner.On("Run", []string{"kubectl", "version", "--client", "-o=json"}).Return(nil)
+					}
+
+					// Run
+					setDryRunFlag(testRunner, buf)
+
+					// Check
+					if dryRunFlag != test.expectedFlag {
+						t.Fatalf("expected: %s, got: %s", test.expectedFlag, dryRunFlag)
+					}
+					return nil
+				},
+			}).Run([]string{"run"})
+
+			if err != nil {
+				t.Fatalf("unepected err: %v", err)
+			}
+		})
+	}
+}
