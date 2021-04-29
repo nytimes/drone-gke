@@ -1,4 +1,11 @@
 ---
+kind: pipeline
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
 workspace:
   base: /go
   path: src/github.com/nytimes/drone-gke
@@ -12,45 +19,66 @@ go_config: &go_config
 
 slack_config: &slack_config
   image: plugins/slack
+  settings:
+    channel: dv-notifications
+  environment:
+    SLACK_WEBHOOK:
+      from_secret: slack_webhook
+
   channel: dv-notifications
   secrets: [slack_webhook]
 
-pipeline:
-  test:
-    <<: *go_config
-    commands:
-      - go mod download
-      - go test -cover -vet all
+steps:
+- name: test
+  pull: if-not-exists
+  <<: *go_config
+  commands:
+  - go mod download
+  - go test -cover -vet all
 
-  build:
-    <<: *go_config
-    commands:
-      - go build -a -ldflags "-X main.version=n/a -X main.rev=${DRONE_COMMIT}"
-    when:
-      branch: master
+- name: build
+  pull: if-not-exists
+  <<: *go_config
+  commands:
+  - go build -a -ldflags "-X main.version=n/a -X main.rev=${DRONE_COMMIT}"
+  when:
+    branch:
+    - master
 
-  build_release:
-    <<: *go_config
-    commands:
-      - go build -a -ldflags "-X main.version=${DRONE_TAG} -X main.rev=${DRONE_COMMIT}"
-    when:
-      event: tag
+- name: build_release
+  pull: if-not-exists
+  <<: *go_config
+  commands:
+  - go build -a -ldflags "-X main.version=${DRONE_TAG} -X main.rev=${DRONE_COMMIT}"
+  when:
+    event:
+    - tag
 
-  publish_release:
-    image: plugins/docker
-    repo: nytimes/drone-gke
-    dockerfile: Dockerfile
+- name: publish_release
+  pull: if-not-exists
+  image: plugins/docker
+  settings:
     auto_tag: true
-    secrets:
-      - docker_username
-      - docker_password
+    dockerfile: Dockerfile
+    repo: nytimes/drone-gke
+  environment:
+    DOCKER_PASSWORD:
+      from_secret: docker_password
+    DOCKER_USERNAME:
+      from_secret: docker_username
 
-  slack:
-    <<: *slack_config
-    when:
-      branch: master
+- name: slack
+  pull: if-not-exists
+  <<: *slack_config
+  when:
+    branch:
+    - master
 
-  slack_tag:
-    <<: *slack_config
-    when:
-      event: tag
+- name: slack_tag
+  pull: if-not-exists
+  <<: *slack_config
+  when:
+    event:
+    - tag
+
+...
