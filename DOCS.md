@@ -648,8 +648,8 @@ steps:
   - name: build
     image: golang:1.14
     environment:
-      - GOPATH=/drone
-      - CGO_ENABLED=0
+      GOPATH: /drone
+      CGO_ENABLED: 0
     commands:
       - go get -t
       - go test -v -cover
@@ -661,9 +661,11 @@ steps:
 
   - name: gcr
     image: plugins/gcr
-    registry: us.gcr.io
-    repo: us.gcr.io/my-gke-project/my-app
-    tag: ${DRONE_COMMIT}
+    settings:
+      registry: us.gcr.io
+      repo: my-gke-project/my-app
+      tags:
+      - ${DRONE_COMMIT}
     secrets: [google_credentials]
     when:
       event: push
@@ -672,22 +674,22 @@ steps:
   - name: gke
     image: nytimes/drone-gke
     environment:
-      USER: root
       TOKEN:
         from_secret: GOOGLE_CREDENTIALS
+      USER: root
       SECRET_API_TOKEN:
         from_secret: APP_API_KEY
       SECRET_BASE64_P12_CERT:
         from_secret: P12_CERT
     settings:
-      cluster: my-gke-cluster
-      expand_env_vars: true
-      namespace: ${DRONE_BRANCH}
       zone: us-central1-a
+      cluster: my-gke-cluster
+      namespace: ${DRONE_BRANCH}
+      expand_env_vars: true
       vars:
         app: my-app
         env: dev
-        image: gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
+        image: us.gcr.io/my-gke-project/my-app:${DRONE_COMMIT}
         user: $${USER}
     when:
       event: push
@@ -732,23 +734,27 @@ spec:
 ---
 apiVersion: v1
 kind: Service
+
 metadata:
   name: {{.app}}-{{.env}}
+
 spec:
   type: NodePort
   selector:
     app: {{.app}}
     env: {{.env}}
   ports:
-    - port: 80
-      targetPort: 8000
+    - name: http
       protocol: TCP
-
+      port: 80
+      targetPort: 8000
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
+
 metadata:
   name: {{.app}}-{{.env}}
+
 spec:
   backend:
     serviceName: {{.app}}-{{.env}}
