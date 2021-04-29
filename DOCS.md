@@ -521,10 +521,6 @@ The plugin infers the GCP project from the JSON credentials (`token`) and retrie
 
 [service-account]: https://cloud.google.com/storage/docs/authentication#service_accounts
 
-### Setting the JSON token
-
-Improved in Drone 0.5+, it is no longer necessary to align the JSON file.
-
 #### GUI
 
 Simply copy the contents of the JSON credentials file and paste it directly in the input field (for example for a secret named `GOOGLE_CREDENTIALS`).
