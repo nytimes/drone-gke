@@ -1,7 +1,7 @@
 <!--
 Hi there,
 
-Thank you for an opening a pull request, we will get back to you as soon as possible!
+Thank you for opening a pull request, we will get back to you as soon as possible!
 -->
 
 If this is a change to the core functionality, did you make a corresponding PR to [drone-eks]?
