@@ -27,9 +27,6 @@ slack_config: &slack_config
     SLACK_WEBHOOK:
       from_secret: slack_webhook
 
-  channel: dv-notifications
-  secrets: [slack_webhook]
-
 steps:
 - <<: *go_config
   name: test
