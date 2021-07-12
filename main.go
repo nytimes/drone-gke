@@ -107,6 +107,12 @@ func getAppFlags() []cli.Flag {
 			EnvVars: []string{"PLUGIN_NAMESPACE"},
 		},
 		&cli.StringFlag{
+			Name:    "kustomize-source",
+			Usage:   "source arg for kubectl kustomize preprocessing",
+			EnvVars: []string{"PLUGIN_KUSTOMIZE"},
+			Value:   "false",
+		},
+		&cli.StringFlag{
 			Name:    "kube-template",
 			Usage:   "template for Kubernetes resources, e.g. Deployments",
 			EnvVars: []string{"PLUGIN_TEMPLATE"},
@@ -277,6 +283,14 @@ func run(c *cli.Context) error {
 	if c.Bool("verbose") {
 		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", templateData)
 		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsDataRedacted)
+	}
+
+	// Run kustomize, if we're doing that:
+	if c.String("kustomize-source") != "false" {
+		err = kustomize(c, environ)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Render manifest templates
@@ -602,6 +616,29 @@ func templateData(c *cli.Context, project string, vars map[string]interface{}, s
 	}
 
 	return templateData, secretsData, secretsDataRedacted, nil
+}
+
+// kustomize uses kubectl's in-built kustomize support to generate a manifest
+func kustomize(c *cli.Context, environ []string) error {
+	f, err := os.OpenFile(c.String("kube-template"), os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		log("Warning: failed to open \"" + c.String("kube-template") + "\" for writing")
+		return err
+	}
+
+	defer f.Close()
+
+	kustomizeRunner := NewBasicRunner("", environ, io.Writer(f), os.Stderr)
+	args := []string{
+		"kustomize",
+		c.String("kustomize-source"),
+	}
+
+	err = kustomizeRunner.Run(kubectlCmd, args...)
+	if err != nil {
+		log("Warning: failed to generate manifest from kustomize source")
+	}
+	return err
 }
 
 // renderTemplates renders templates, writes into files and returns rendered template paths
