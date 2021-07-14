@@ -157,6 +157,22 @@ export CONFIG_HOME=$(pwd)/my-custom-configs
 make run
 ```
 
+Using custom configurations with [kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/):
+
+```sh
+# Deploy manifest templates in my-custom-configs
+
+# my-custom-configs
+# ├── kustomization.yaml
+# ├── .kube.sec.yml
+# ├── .kube.yml
+# └── vars.json
+
+export CONFIG_HOME=$(pwd)/my-custom-configs
+export PLUGIN_KUSTOMIZE="${CONFIG_HOME}"
+make run
+```
+
 Using custom configurations with _custom_ files:
 
 ```sh

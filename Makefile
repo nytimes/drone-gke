@@ -184,7 +184,6 @@ run : export PLUGIN_DRY_RUN ?= 1
 run : export PLUGIN_NAMESPACE ?= drone-gke-test
 run : export PLUGIN_REGION ?= $(shell $(gcloud) config get-value compute/region 2>/dev/null)
 run : export PLUGIN_SECRET_TEMPLATE ?= $(CONFIG_HOME)/.kube.sec.yml
-run : export PLUGIN_KUSTOMIZE ?= $(CONFIG_HOME)/
 run : export PLUGIN_TEMPLATE ?= $(CONFIG_HOME)/.kube.yml
 run : export PLUGIN_TOKEN ?= $(shell cat $(test_sa_key_path))
 run : export PLUGIN_VARS ?= $(shell cat $(CONFIG_HOME)/vars.json)
