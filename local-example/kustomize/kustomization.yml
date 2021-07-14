@@ -1,0 +1,12 @@
+# Add the following metadata to anything we generate:
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    app: "{{.app}}"
+    env: "{{.env}}"
+
+# Generate a ConfigMap from a local file:
+configMapGenerator:
+- name: drone-gke-kustom-job
+  files:
+  - my_local_file.txt
