@@ -40,7 +40,7 @@ steps:
   - go build -a -ldflags "-X main.version=n/a -X main.rev=${DRONE_COMMIT}"
   when:
     branch:
-    - master
+    - main
 
 - <<: *go_config
   name: build_release
@@ -67,7 +67,7 @@ steps:
   name: slack
   when:
     branch:
-    - master
+    - main
 
 - <<: *slack_config
   name: slack_tag

@@ -34,7 +34,7 @@ Before submitting changes, please follow these guidelines:
 
 The git workflow follows [GitFlow](https://datasift.github.io/gitflow/IntroducingGitFlow.html).
 
-New features should be based on the `master` branch.
+New features should be based on the `main` branch.
 
 ### Dependencies
 

@@ -24,7 +24,7 @@ docker_default_repo_name = nytimes
 docker_image_name = drone-gke
 docker_default_tag = latest
 ifneq ($(git_current_branch), $(git_default_branch))
-	# if current branch name is NOT .git/refs/remotes/origin/HEAD (i.e., master)
+	# if current branch name is NOT .git/refs/remotes/origin/HEAD (i.e., main)
 	# then use the current branch name as the default docker tag
 	docker_default_tag = $(git_current_branch)
 endif

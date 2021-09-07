@@ -22,7 +22,7 @@ This tool follows [semantic versioning](https://semver.org/).
 Use the minor version (`x.X`) releases for stable use cases (eg 0.9).
 Changes are documented in the [release notes](https://github.com/nytimes/drone-gke/releases).
 
-- Pushes to the [`master`](https://github.com/nytimes/drone-gke/tree/master) branch will update the image tagged `latest`.
+- Pushes to the [`main`](https://github.com/nytimes/drone-gke/tree/main) branch will update the image tagged `latest`.
 - Releases will create the images with each major/minor/patch tag values (eg `0.7.1` and `0.7`).
 
 ### Kubernetes API

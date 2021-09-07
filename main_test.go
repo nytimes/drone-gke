@@ -210,7 +210,7 @@ func TestFetchCredentials(t *testing.T) {
 func TestTemplateData(t *testing.T) {
 	// Set cli.Context with data
 	set := flag.NewFlagSet("test-set", 0)
-	set.String("drone-branch", "master", "")
+	set.String("drone-branch", "main", "")
 	set.String("drone-build-number", "2", "")
 	set.String("drone-commit", "e0f21b90a", "")
 	set.String("drone-tag", "v0.0.0", "")
@@ -228,7 +228,7 @@ func TestTemplateData(t *testing.T) {
 
 	// Verify
 	assert.Equal(t, map[string]interface{}{
-		"BRANCH":       "master",
+		"BRANCH":       "main",
 		"BUILD_NUMBER": "2",
 		"COMMIT":       "e0f21b90a",
 		"TAG":          "v0.0.0",
@@ -241,7 +241,7 @@ func TestTemplateData(t *testing.T) {
 	}, tmplData)
 
 	assert.Equal(t, map[string]interface{}{
-		"BRANCH":       "master",
+		"BRANCH":       "main",
 		"BUILD_NUMBER": "2",
 		"COMMIT":       "e0f21b90a",
 		"TAG":          "v0.0.0",
@@ -274,7 +274,7 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 
 	// Set cli.Context with data
 	set := flag.NewFlagSet("test-set", 0)
-	set.String("drone-branch", "master", "")
+	set.String("drone-branch", "main", "")
 	set.String("drone-build-number", "2", "")
 	set.String("drone-commit", "e0f21b90a", "")
 	set.String("drone-tag", "v0.0.0", "")
@@ -293,7 +293,7 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 
 	// Verify
 	assert.Equal(t, map[string]interface{}{
-		"BRANCH":       "master",
+		"BRANCH":       "main",
 		"BUILD_NUMBER": "2",
 		"COMMIT":       "e0f21b90a",
 		"TAG":          "v0.0.0",
@@ -306,7 +306,7 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 	}, tmplData)
 
 	assert.Equal(t, map[string]interface{}{
-		"BRANCH":       "master",
+		"BRANCH":       "main",
 		"BUILD_NUMBER": "2",
 		"COMMIT":       "e0f21b90a",
 		"TAG":          "v0.0.0",
@@ -681,9 +681,9 @@ func TestTokenParamPrecedence(t *testing.T) {
 
 func TestSetDryRunFlag(t *testing.T) {
 	tests := []struct {
-		name string
+		name                 string
 		versionCommandOutput string
-		explicitVersion string
+		explicitVersion      string
 
 		expectedFlag string
 	}{
@@ -703,7 +703,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "",
-			expectedFlag: dryRunFlagPre118,
+			expectedFlag:    dryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.15",
@@ -721,7 +721,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.15",
-			expectedFlag: dryRunFlagPre118,
+			expectedFlag:    dryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.16",
@@ -739,7 +739,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.16",
-			expectedFlag: dryRunFlagPre118,
+			expectedFlag:    dryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.17",
@@ -757,7 +757,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.17",
-			expectedFlag: dryRunFlagPre118,
+			expectedFlag:    dryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.18",
@@ -775,7 +775,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.18",
-			expectedFlag: dryRunFlagDefault,
+			expectedFlag:    dryRunFlagDefault,
 		},
 		{
 			name: "kubectl-1.19",
@@ -793,7 +793,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.19",
-			expectedFlag: dryRunFlagDefault,
+			expectedFlag:    dryRunFlagDefault,
 		},
 	}
 	for _, test := range tests {
