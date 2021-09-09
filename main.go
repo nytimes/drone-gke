@@ -107,6 +107,11 @@ func getAppFlags() []cli.Flag {
 			EnvVars: []string{"PLUGIN_NAMESPACE"},
 		},
 		&cli.StringFlag{
+			Name:    "kustomize-source",
+			Usage:   "Kustomize source argument for optional preprocessing",
+			EnvVars: []string{"PLUGIN_KUSTOMIZE"},
+		},
+		&cli.StringFlag{
 			Name:    "kube-template",
 			Usage:   "template for Kubernetes resources, e.g. Deployments",
 			EnvVars: []string{"PLUGIN_TEMPLATE"},
@@ -274,6 +279,16 @@ func run(c *cli.Context) error {
 	if c.Bool("verbose") {
 		dumpData(os.Stdout, "VARIABLES AVAILABLE FOR ALL TEMPLATES", templateData)
 		dumpData(os.Stdout, "ADDITIONAL SECRET VARIABLES AVAILABLE FOR .sec.yml TEMPLATES", secretsDataRedacted)
+	}
+
+	// Run kustomize, if we're doing that:
+	if c.String("kustomize-source") != "" {
+		err = kustomizeTemplate(c, environ)
+		if err != nil {
+			return err
+		}
+	} else {
+		log("NOTICE: No kustomize template provided. Proceeding without.\n")
 	}
 
 	// Render manifest templates
@@ -599,6 +614,39 @@ func templateData(c *cli.Context, project string, vars map[string]interface{}, s
 	}
 
 	return templateData, secretsData, secretsDataRedacted, nil
+}
+
+// kustomizeTemplate uses kubectl's in-built kustomize support to generate
+// the manifest pointed to by kube-template
+func kustomizeTemplate(c *cli.Context, environ []string) error {
+	kustomizeSource := c.String("kustomize-source")
+	kustomizeDest := c.String("kube-template")
+
+	// Check for a destination and open it, else bail out with an error:
+	if kustomizeDest == "" {
+		return fmt.Errorf("Kustomize source specified, but no output file (\"kube-template\") was found")
+	}
+
+	f, err := os.OpenFile(kustomizeDest, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return fmt.Errorf("Unable to open kustomize output file %s: %v", kustomizeDest, err)
+	}
+	defer f.Close()
+
+	// Here, we use the path given by kube-template as the stdout buffer:
+	var kustomizeStderr bytes.Buffer
+	kustomizeRunner := NewBasicRunner("", environ, io.Writer(f), &kustomizeStderr)
+	args := []string{
+		"kustomize",
+		kustomizeSource,
+	}
+
+	// Run kustomize + bail with error details on failure:
+	err = kustomizeRunner.Run(kubectlCmd, args...)
+	if err != nil {
+		return fmt.Errorf("Failed to run kustomize (%v):\n  %s\n", err, &kustomizeStderr)
+	}
+	return err
 }
 
 // renderTemplates renders templates, writes into files and returns rendered template paths

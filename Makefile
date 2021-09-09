@@ -208,6 +208,7 @@ run :
 		--env PLUGIN_REGION \
 		--env PLUGIN_SECRET_TEMPLATE \
 		--env PLUGIN_TEMPLATE \
+		--env PLUGIN_KUSTOMIZE \
 		--env PLUGIN_TOKEN \
 		--env PLUGIN_VARS \
 		--env PLUGIN_VERBOSE \

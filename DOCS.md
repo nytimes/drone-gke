@@ -206,6 +206,55 @@ steps:
       # ...
 ```
 
+### `kustomize`
+
+_**type**_ `string`
+
+_**default**_ `""`
+
+_**description**_ relative path to a [kustomization directory](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) or [remote resource](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/goGetterGeneratorPlugin.md) (e.g. a github repo — see examples below)
+
+_**notes**_ as the `-f` and `-k` parameters for `kubectl` are mutally exlusive,
+if the `kustomize` parameter is specified, the `template` parameter is used
+as the kustomize _output_ file. Afterwards, the usual [template rendering](#template) is
+applied to the result.
+
+_**example**_ (local)
+
+```yaml
+# .drone.yml
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      # Directory containing your kustomization.yml:
+      kustomize: kustom
+      # Output file from kustomize, passed to drone-gke as "template":
+      template: k8s/app.yaml
+      # ...
+```
+
+_**example**_ (remote)
+
+```yaml
+# .drone.yml
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      # OR, fetch your base kustomization config from a remote source!
+      kustomize: https://github.com/nytimes/drone-gke/local-example/kustomize
+      # Output file from kustomize, passed to drone-gke as "template":
+      template: .kube.yml
+      # ...
+```
+
 ### `secret_template`
 
 _**type**_ `string`
