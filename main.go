@@ -194,11 +194,8 @@ func wrapMain() error {
 	app.Action = run
 	app.Version = fmt.Sprintf("%s-%s", version, rev)
 	app.Flags = getAppFlags()
-	if err := app.Run(os.Args); err != nil {
-		return err
-	}
 
-	return nil
+	return app.Run(os.Args)
 }
 
 func run(c *cli.Context) error {
