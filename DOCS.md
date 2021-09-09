@@ -560,7 +560,7 @@ These variables are always available to reference in any manifest, and cannot be
 
 ```json
 {
-  "BRANCH": "master",
+  "BRANCH": "main",
   "BUILD_NUMBER": "12",
   "COMMIT": "4923x0c3380413ec9288e3c0bfbf534b0f18fed1",
   "TAG": "",
@@ -669,7 +669,7 @@ steps:
     secrets: [google_credentials]
     when:
       event: push
-      branch: master
+      branch: main
 
   - name: gke
     image: nytimes/drone-gke
@@ -693,7 +693,7 @@ steps:
         user: $${USER}
     when:
       event: push
-      branch: master
+      branch: main
 ```
 
 ### `.kube.yml`
