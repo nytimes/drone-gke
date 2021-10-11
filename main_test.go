@@ -189,8 +189,8 @@ func TestFetchCredentials(t *testing.T) {
 	testRunner.On("Run", []string{"gcloud", "auth", "activate-service-account", "--key-file", "/tmp/gcloud.json"}).Return(nil)
 	testRunner.On("Run", []string{"gcloud", "container", "clusters", "get-credentials", "cluster-0", "--project", "test-project", "--zone", "us-east1-b"}).Return(nil)
 	testRunner.On("Run", []string{"gcloud", "container", "clusters", "get-credentials", "cluster-0", "--project", "test-project", "--region", "us-west1"}).Return(nil)
-	zonalErr := fetchCredentials(zonalContext, "test-project", testRunner)
-	regionalErr := fetchCredentials(regionalContext, "test-project", testRunner)
+	zonalErr := fetchCredentials(zonalContext, zonalContext.String("token"), "test-project", testRunner)
+	regionalErr := fetchCredentials(regionalContext, regionalContext.String("token"), "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, zonalErr)
 	assert.NoError(t, regionalErr)
@@ -202,7 +202,7 @@ func TestFetchCredentials(t *testing.T) {
 	// Run() error
 	testRunner = new(MockedRunner)
 	testRunner.On("Run", []string{"gcloud", "auth", "activate-service-account", "--key-file", "/tmp/gcloud.json"}).Return(fmt.Errorf("e"))
-	err = fetchCredentials(zonalContext, "test-project", testRunner)
+	err = fetchCredentials(zonalContext, zonalContext.String("token"), "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.Error(t, err)
 }
@@ -834,6 +834,60 @@ func TestSetDryRunFlag(t *testing.T) {
 
 			if err != nil {
 				t.Fatalf("unepected err: %v", err)
+			}
+		})
+	}
+}
+
+func Test_decodeToken(t *testing.T) {
+	serviceAccountKey := `{
+  "type": "service_account",
+  "project_id": "nyt-project-dev",
+  "private_key_id": "key-id",
+  "private_key": "shhh",
+  "client_email": "gke-sa@nyt-project-dev.iam.gserviceaccount.com",
+  "client_id": "client-id",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gke-sa%40nyt-project-dev.iam.gserviceaccount.com"
+}`
+
+	encodedServiceAccountKey := "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAibnl0LXByb2plY3QtZGV2IiwK" +
+		"ICAicHJpdmF0ZV9rZXlfaWQiOiAia2V5LWlkIiwKICAicHJpdmF0ZV9rZXkiOiAic2hoaCIsCiAgImNsaWVudF9lbWFpbCI6ICJna2Utc2FAbnl0LX" +
+		"Byb2plY3QtZGV2LmlhbS5nc2VydmljZWFjY291bnQuY29tIiwKICAiY2xpZW50X2lkIjogImNsaWVudC1pZCIsCiAgImF1dGhfdXJpIjogImh0dHBz" +
+		"Oi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL29hdXRoMi9hdXRoIiwKICAidG9rZW5fdXJpIjogImh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL2" +
+		"9hdXRoMi90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEv" +
+		"Y2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2" +
+		"drZS1zYSU0MG55dC1wcm9qZWN0LWRldi5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIKfQ=="
+
+	type args struct {
+		token string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "encoded-token",
+			args: args{
+				encodedServiceAccountKey,
+			},
+			want: serviceAccountKey,
+		},
+		{
+			name: "non-encoded-token",
+			args: args{
+				serviceAccountKey,
+			},
+			want: serviceAccountKey,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := decodeToken(tt.args.token); got != tt.want {
+				t.Errorf("decodeToken() = %v, want %v", got, tt.want)
 			}
 		})
 	}

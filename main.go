@@ -204,11 +204,13 @@ func run(c *cli.Context) error {
 		return err
 	}
 
+	token := decodeToken(c.String("token"))
+
 	// Use project if explicitly stated, otherwise infer from the service account token.
 	project := c.String("project")
 	if project == "" {
 		log("Parsing Project ID from credentials\n")
-		project = getProjectFromToken(c.String("token"))
+		project = getProjectFromToken(token)
 		if project == "" {
 			return fmt.Errorf("Missing required param: project")
 		}
@@ -250,7 +252,7 @@ func run(c *cli.Context) error {
 	runner := NewBasicRunner("", environ, os.Stdout, os.Stderr)
 
 	// Auth with gcloud and fetch kubectl credentials
-	if err := fetchCredentials(c, project, runner); err != nil {
+	if err := fetchCredentials(c, token, project, runner); err != nil {
 		return err
 	}
 
@@ -318,6 +320,17 @@ func run(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+// decodeToken decodes the service account key if provided as base64
+func decodeToken(token string) string {
+	if decodedToken, err := base64.StdEncoding.DecodeString(token); err == nil {
+		// if no error then the SA key is base64 encoded
+		token = string(decodedToken)
+	} else {
+		fmt.Println("info: skipping base64 credentials decode")
+	}
+	return token
 }
 
 // checkParams checks required params
@@ -506,10 +519,10 @@ func parseSecrets() (map[string]string, error) {
 }
 
 // fetchCredentials authenticates with gcloud and fetches credentials for kubectl
-func fetchCredentials(c *cli.Context, project string, runner Runner) error {
+func fetchCredentials(c *cli.Context, token, project string, runner Runner) error {
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
-	err := ioutil.WriteFile(keyPath, []byte(c.String("token")), 0600)
+	err := ioutil.WriteFile(keyPath, []byte(token), 0600)
 	if err != nil {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
