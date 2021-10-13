@@ -515,7 +515,7 @@ steps:
 
 `drone-gke` requires a Google service account and uses its [JSON credential file][service-account] to authenticate.
 
-This must be passed to the plugin under the target `token`.
+This must be passed to the plugin under the target `token`. If provided in base64 format, the plugin will decode it internally.
 
 The plugin infers the GCP project from the JSON credentials (`token`) and retrieves the GKE cluster credentials.
 
