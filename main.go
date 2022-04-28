@@ -106,6 +106,12 @@ func getAppFlags() []cli.Flag {
 			Usage:   "Kubernetes namespace to operate in",
 			EnvVars: []string{"PLUGIN_NAMESPACE"},
 		},
+		&cli.BoolFlag{
+			Name:    "create-namespace",
+			Usage:   "automatically create a Namespace resource when a 'namespace' value is specified",
+			EnvVars: []string{"PLUGIN_CREATE_NAMESPACE"},
+			Value:   true,
+		},
 		&cli.StringFlag{
 			Name:    "kube-template",
 			Usage:   "template for Kubernetes resources, e.g. Deployments",
@@ -708,6 +714,10 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 
 	if err := runner.Run(kubectlCmd, "config", "set-context", context, "--namespace", namespace); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	if !c.Bool("create-namespace") {
+		return nil
 	}
 
 	// Write the namespace manifest to a tmp file for application.

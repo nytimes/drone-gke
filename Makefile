@@ -143,7 +143,7 @@ $(coverage_name) : export GO111MODULE ?= on
 $(coverage_name) : export GOPROXY ?= https://proxy.golang.org
 
 # test binary
-$(coverage_name) : $(binary_name)
+$(coverage_name) : $(binary_name) dump_test.go exec_test.go main_test.go
 	@$(go) test -cover -vet all -coverprofile=$@
 
 .PHONY : test-coverage

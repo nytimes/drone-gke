@@ -154,6 +154,30 @@ steps:
       # ...
 ```
 
+### `namespace`
+
+_**type**_ `string`
+
+_**default**_ `''`
+
+_**description**_ name of Kubernetes Namespace where manifests will be applied
+
+_**notes**_ if not specified, resources will be applied to `default` Namespace; if specified and [`create_namespace`](#create_namespace) is set to `false`, the Namespace resource must already exist within the cluster
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    cluster: prod
+    namespace: petstore
+    # ...
+```
+
 ### `template`
 
 _**type**_ `string`
@@ -509,6 +533,30 @@ steps:
     settings:
       verbose: true
       # ...
+```
+
+### `create_namespace`
+
+_**type**_ `bool`
+
+_**default**_ `true`
+
+_**description**_ automatically create a Namespace resource when a [`namespace`](#namespace) value is specified
+
+_**notes**_ depends on non-empty `namespace` value; the resource will _always_ be applied to the cluster _prior to_ any resources included in [`template`](#template) / [`secret_template`](#secret_template); may modify any existing Namespace resource configuration; the automatically created Namespace resource is not configurable (see [source](https://github.com/nytimes/drone-gke/blob/2909135b2dce136aa5095d609d91b0963fbb4697/main.go#L51-L54) for more details);
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+pipeline:
+  # ...
+  deploy:
+    image: nytimes/drone-gke
+    namespace: petstore
+    create_namespace: false
+    # ...
 ```
 
 ## Service Account Credentials
