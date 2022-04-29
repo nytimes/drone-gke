@@ -447,6 +447,7 @@ func TestSetNamespace(t *testing.T) {
 	set.String("cluster", "cluster-0", "")
 	set.String("namespace", "test-ns", "")
 	set.Bool("dry-run", false, "")
+	set.Bool("create-namespace", true, "")
 	c := cli.NewContext(nil, set, nil)
 
 	testRunner := new(MockedRunner)
@@ -462,6 +463,7 @@ func TestSetNamespace(t *testing.T) {
 	set.String("cluster", "regional-cluster", "")
 	set.String("namespace", "test-ns", "")
 	set.Bool("dry-run", false, "")
+	set.Bool("create-namespace", true, "")
 	c = cli.NewContext(nil, set, nil)
 
 	testRunner = new(MockedRunner)
@@ -481,11 +483,27 @@ func TestSetNamespace(t *testing.T) {
 	set.String("cluster", "cluster-0", "")
 	set.String("namespace", "Feature/1892-TEST-NS", "")
 	set.Bool("dry-run", true, "")
+	set.Bool("create-namespace", true, "")
 	c = cli.NewContext(nil, set, nil)
 
 	testRunner = new(MockedRunner)
 	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "feature-1892-test-ns"}).Return(nil)
 	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/tmp/namespace.json"}).Return(nil)
+	err = setNamespace(c, "test-project", testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+
+	// Opt-out of auto namespace creation
+	set = flag.NewFlagSet("no-create-namespace-set", 0)
+	set.String("zone", "us-east1-b", "")
+	set.String("cluster", "cluster-0", "")
+	set.String("namespace", "Feature/1892-TEST-NS", "")
+	set.Bool("dry-run", false, "")
+	set.Bool("create-namespace", false, "")
+	c = cli.NewContext(nil, set, nil)
+
+	testRunner = new(MockedRunner)
+	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "feature-1892-test-ns"}).Return(nil)
 	err = setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
