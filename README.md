@@ -38,7 +38,6 @@ If you want to use a different version, you can specify the version of `kubectl`
 [sdk]: https://cloud.google.com/sdk/docs/release-notes#23700_2019-03-05
 [version-parameter]: DOCS.md#kubectl_version
 
-
 ## Usage
 
 > :warning: For usage within in a `.drone.yml` pipeline, please take a look at [the docs](DOCS.md)
