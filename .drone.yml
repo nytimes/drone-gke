@@ -56,7 +56,7 @@ steps:
   settings:
     dry_run: true
     dockerfile: Dockerfile
-    repo: nytimes/drone-gae
+    repo: nytimes/drone-gke
   when:
     event:
     - pull_request
