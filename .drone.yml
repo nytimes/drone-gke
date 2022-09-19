@@ -22,7 +22,7 @@ slack_config: &slack_config
   image: plugins/slack
   pull: if-not-exists
   settings:
-    channel: dv-cicd
+    channel: dv-cdp-alerts
   environment:
     SLACK_WEBHOOK:
       from_secret: slack_webhook
@@ -49,6 +49,17 @@ steps:
   when:
     event:
     - tag
+
+- name: docker_build_test
+  image: plugins/docker
+  pull: if-not-exists
+  settings:
+    dry_run: true
+    dockerfile: Dockerfile
+    repo: nytimes/drone-gke
+  when:
+    event:
+    - pull_request
 
 - name: publish_release
   image: plugins/docker
