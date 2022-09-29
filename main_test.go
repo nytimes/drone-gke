@@ -452,7 +452,7 @@ func TestSetNamespace(t *testing.T) {
 
 	testRunner := new(MockedRunner)
 	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "test-ns"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/tmp/namespace.json"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/tmp/namespace.json"}).Return(nil)
 	err := setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -468,7 +468,7 @@ func TestSetNamespace(t *testing.T) {
 
 	testRunner = new(MockedRunner)
 	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-west1_regional-cluster", "--namespace", "test-ns"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/tmp/namespace.json"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/tmp/namespace.json"}).Return(nil)
 	err = setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -488,7 +488,7 @@ func TestSetNamespace(t *testing.T) {
 
 	testRunner = new(MockedRunner)
 	testRunner.On("Run", []string{"kubectl", "config", "set-context", "gke_test-project_us-east1-b_cluster-0", "--namespace", "feature-1892-test-ns"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/tmp/namespace.json"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/tmp/namespace.json"}).Return(nil)
 	err = setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -523,10 +523,10 @@ func TestApplyManifests(t *testing.T) {
 	}
 
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-tamplate"}).Return(nil)
 	err := applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -537,8 +537,8 @@ func TestApplyManifests(t *testing.T) {
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-tamplate"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -556,8 +556,8 @@ func TestApplyManifests(t *testing.T) {
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--record", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -599,10 +599,10 @@ func TestWaitForRollout(t *testing.T) {
 
 func TestApplyArgs(t *testing.T) {
 	args := applyArgs(false, "/path/to/file/1")
-	assert.Equal(t, []string{"apply", "--record", "--filename", "/path/to/file/1"}, args)
+	assert.Equal(t, []string{"apply", "--filename", "/path/to/file/1"}, args)
 
 	args = applyArgs(true, "/path/to/file/2")
-	assert.Equal(t, []string{"apply", "--record", "--dry-run=client", "--filename", "/path/to/file/2"}, args)
+	assert.Equal(t, []string{"apply", "--dry-run=client", "--filename", "/path/to/file/2"}, args)
 }
 
 func TestPrintTrimmedError(t *testing.T) {
