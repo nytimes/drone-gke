@@ -831,7 +831,6 @@ func waitForRollout(c *cli.Context, runner Runner) error {
 func applyArgs(dryrun bool, file string) []string {
 	args := []string{
 		"apply",
-		"--record",
 	}
 
 	if dryrun {
