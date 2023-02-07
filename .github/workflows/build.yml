@@ -1,0 +1,82 @@
+name: Go
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - '*'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  GO111MODULE: on
+  CGO_ENABLED: 0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: write
+      checks: write
+      contents: write
+      deployments: write
+      id-token: write
+      issues: write
+      pull-requests: write
+      security-events: write
+      statuses: write
+      
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+
+    - name: Test
+      run: |
+        go mod download
+        go test -cover -vet all
+        
+    - name: Build
+      run: |
+        go build -a -ldflags "-X main.version=${GITHUB_REF_NAME} -X main.rev=${GITHUB_SHA}"
+
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: nytimes/drone-gke
+        tags: |
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=ref,event=tag
+        
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+        
+    - name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        platforms: linux/amd64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        
+    - name: Send GitHub Action trigger data to Slack workflow
+      id: slack
+      uses: slackapi/slack-github-action@v1.23.0
+      if: ${{ github.event_name != 'pull_request' }}
+      with:
+        payload: |
+          {
+            "text": "GitHub Actions Build Result: ${{ job.status }}\n triggered_by: ${{ github.actor }}\n job url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n commit url: ${{ github.event.head_commit.url }}"
+          }
+      env:
+        # webhook for #dv-cdp-alerts
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
