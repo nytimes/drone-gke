@@ -275,4 +275,4 @@ make destroy-test-resources
 
 ## License
 
-Unless otherwise noted, `drone-gke` is distributed under the Apache 2.0-style license found in [LICENSE](LICENSE).
+Unless otherwise noted, `drone-gke` is distributed under the Apache 2.0-style license found in the LICENSE file.
