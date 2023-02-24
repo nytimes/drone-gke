@@ -28,6 +28,10 @@ Before submitting changes, please follow these guidelines:
 1. Make sure code follows the ['Go Code Review Comments'](https://github.com/golang/go/wiki/CodeReviewComments).
 1. Open a Pull Request.
 
+## License
+
+Unless otherwise noted, `drone-gke` is distributed under the Apache 2.0-style license found in the LICENSE file.
+
 ## Development
 
 ### Workflow
@@ -272,7 +276,3 @@ Once you've finished testing, don't forget to delete these test resources:
 ```sh
 make destroy-test-resources
 ```
-
-## License
-
-Unless otherwise noted, `drone-gke` is distributed under the Apache 2.0-style license found in the LICENSE file.
