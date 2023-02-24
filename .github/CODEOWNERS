@@ -2,3 +2,8 @@
 # Unless a later match takes precedence, these owners
 # will be requested for review when someone opens a pull request.
 * @nytimes/delivery-engineering
+
+# As Security-hardening-for-github-actions best practices, make sure any changes to "./github/workflows" are approved
+# by project owners.
+
+./github/workflows @nytimes/delivery-engineering
