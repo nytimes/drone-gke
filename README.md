@@ -1,6 +1,6 @@
 # drone-gke
 
-[![Build Status](https://cloud.drone.io/api/badges/nytimes/drone-gke/status.svg)](https://cloud.drone.io/nytimes/drone-gke)
+[![Build Status](https://github.com/nytimes/drone-gke/actions/workflows/build.yml/badge.svg)](https://github.com/nytimes/drone-gke/actions/workflows/build.yaml)
 
 Drone plugin to deploy container images to Kubernetes on Google Container Engine.
 For the usage information and a listing of the available options please take a look at [the docs](DOCS.md).
