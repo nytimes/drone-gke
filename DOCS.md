@@ -340,6 +340,61 @@ steps:
       # ...
 ```
 
+### `wait_jobs`
+
+_**type**_ `[]string`
+
+_**default**_ `[]`
+
+_**description**_ wait for the given jobs using `kubectl wait --for=conditon=complete ...`
+
+_**notes**_ deployments can be specified as `"job/<name>"` as expected by `kubectl`.
+If just `"<name>"` is given it will be defaulted to `"job/<name>"`.
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-eks
+    image: nytimes/drone-eks
+    settings:
+      wait_jobs:
+      - job/migration
+      - otherjob
+      # ...
+```
+
+### `wait_jobs_seconds`
+
+_**type**_ `int`
+
+_**default**_ `0`
+
+_**description**_ number of seconds to wait for jobs to complete before failing the build
+
+_**notes**_ ignored if `wait_jobs` is not set
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-eks
+    image: nytimes/drone-eks
+    settings:
+      wait_jobs_seconds: 180
+      wait_jobs:
+      - migration
+      # ...
+```
+
 ### `vars`
 
 _**type**_ `map[string]interface{}`
