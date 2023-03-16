@@ -597,6 +597,40 @@ func TestWaitForRollout(t *testing.T) {
 		[]string{"deployment/d1", "deployment/d2"})
 }
 
+// runWaitForJobs is a helper function for testing WaitForJobs.  For each flag-value
+// in flagValues it will expect a corresponding call of the form:
+// "kubectl wait --for=condition=complete <expected-value> ..."
+func runWaitForJobs(t *testing.T, specs []string, expectedValues []string) {
+	set := flag.NewFlagSet("test-set", 0)
+	set.Int("wait-jobs-seconds", 256, "")
+	set.String("namespace", "test-ns", "")
+	strSlice := cli.StringSlice{}
+	for _, spec := range specs {
+		strSlice.Set(spec)
+	}
+	strSliceFlag := cli.StringSliceFlag{Name: "wait-jobs", Value: &strSlice}
+	strSliceFlag.Apply(set)
+	c := cli.NewContext(nil, set, nil)
+	testRunner := new(MockedRunner)
+	for _, s := range expectedValues {
+		testRunner.On("Run", []string{"kubectl", "wait", "--for=condition=complete", s, "--timeout=256s", "--namespace", "test-ns"}).Return(nil)
+	}
+	err := waitForJobs(c, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+}
+
+func TestWaitForJobs(t *testing.T) {
+	runWaitForJobs(t, []string{"job/j1"}, []string{"job/j1"})
+	runWaitForJobs(t,
+		[]string{"job/j1", "job/j2"},
+		[]string{"job/j1", "job/j2"})
+	runWaitForJobs(t, []string{"j1"}, []string{"job/j1"})
+	runWaitForJobs(t,
+		[]string{"j1", "j2"},
+		[]string{"job/j1", "job/j2"})
+}
+
 func TestApplyArgs(t *testing.T) {
 	args := applyArgs(false, "/path/to/file/1")
 	assert.Equal(t, []string{"apply", "--filename", "/path/to/file/1"}, args)

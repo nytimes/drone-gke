@@ -175,6 +175,17 @@ func getAppFlags() []cli.Flag {
 			EnvVars: []string{"PLUGIN_WAIT_SECONDS"},
 			Value:   0,
 		},
+		&cli.StringSliceFlag{
+			Name:    "wait-jobs",
+			Usage:   "list of Jobs to wait for successful completion using kubectl wait",
+			EnvVars: []string{"PLUGIN_WAIT_JOBS"},
+		},
+		&cli.IntFlag{
+			Name:    "wait-jobs-seconds",
+			Usage:   "if wait-jobs is set, number of seconds to wait before failing the build",
+			EnvVars: []string{"PLUGIN_WAIT_JOBS_SECONDS"},
+			Value:   0,
+		},
 		&cli.StringFlag{
 			Name:    "kubectl-version",
 			Usage:   "optional - version of kubectl binary to use, e.g. 1.14",
@@ -322,6 +333,11 @@ func run(c *cli.Context) error {
 	}
 	// Wait for rollout to finish
 	if err := waitForRollout(c, runner); err != nil {
+		return fmt.Errorf("Error: %s\n", err)
+	}
+
+	// Wait for jobs to finish
+	if err:= waitForJobs(c, runner); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
@@ -818,6 +834,50 @@ func waitForRollout(c *cli.Context, runner Runner) error {
 			command = append([]string{strconv.Itoa(waitSeconds), path}, command...)
 			path = timeoutCmd
 		}
+
+		if err := runner.Run(path, command...); err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+	}
+
+	return nil
+}
+
+// waitForJobs executes kubectl to wait for jobs to complete before continuing
+func waitForJobs(c *cli.Context, runner Runner) error {
+	namespace := c.String("namespace")
+	waitSeconds := c.Int("wait-jobs-seconds")
+	specs := c.StringSlice("wait-jobs")
+	waitJobs := []string{}
+	for _, spec := range specs {
+		job := spec
+		if !strings.HasPrefix(spec, "job/") {
+			job = "job/" + job
+		}
+		waitJobs = append(waitJobs, job)
+	}
+
+	waitJobsCount := len(waitJobs)
+	counterProgress := ""
+
+	for counter, job := range waitJobs {
+		if waitJobsCount > 1 {
+			counterProgress = fmt.Sprintf(" %d/%d", counter+1, waitJobsCount)
+		}
+
+		log(fmt.Sprintf("Waiting until job completes for %s%s\n", job, counterProgress))
+
+		command := []string{"wait", "--for=condition=complete", job}
+		
+		if waitSeconds != 0 {
+			command = append(command, fmt.Sprintf("--timeout=%ds", waitSeconds))
+		}
+
+		if namespace != "" {
+			command = append(command, "--namespace", namespace)
+		}
+
+		path := kubectlCmd
 
 		if err := runner.Run(path, command...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
