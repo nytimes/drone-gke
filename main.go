@@ -41,6 +41,7 @@ const (
 
 	dryRunFlagPre118  = "--dry-run=true"
 	dryRunFlagDefault = "--dry-run=client"
+	serverSideFlag    = "--server-side"
 )
 
 // default to kubectlCmdName, can be overriden via kubectl-version param
@@ -70,6 +71,11 @@ func getAppFlags() []cli.Flag {
 			Name:    "dry-run",
 			Usage:   "do not apply the Kubernetes manifests to the API server",
 			EnvVars: []string{"PLUGIN_DRY_RUN"},
+		},
+		&cli.BoolFlag{
+			Name:    "server-side",
+			Usage:   "perform a server-side apply",
+			EnvVars: []string{"PLUGIN_SERVER_SIDE"},
 		},
 		&cli.BoolFlag{
 			Name:    "verbose",
@@ -337,7 +343,7 @@ func run(c *cli.Context) error {
 	}
 
 	// Wait for jobs to finish
-	if err:= waitForJobs(c, runner); err != nil {
+	if err := waitForJobs(c, runner); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
@@ -746,7 +752,7 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 	// Ensure the namespace exists, without errors (unlike `kubectl create namespace`).
 	log("Ensuring the %s namespace exists\n", namespace)
 
-	nsArgs := applyArgs(c.Bool("dry-run"), nsPath)
+	nsArgs := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), nsPath)
 	if err := runner.Run(kubectlCmd, nsArgs...); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
@@ -764,13 +770,13 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 	log("Validating Kubernetes manifests with a dry-run\n")
 
 	if !c.Bool("dry-run") {
-		args := applyArgs(true, manifests)
+		args := applyArgs(true, c.Bool("server-side"), manifests)
 		if err := runner.Run(kubectlCmd, args...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 
 		if len(manifestsSecret) > 0 {
-			argsSecret := applyArgs(true, manifestsSecret)
+			argsSecret := applyArgs(true, c.Bool("server-side"), manifestsSecret)
 			if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
 				return fmt.Errorf("Error: %s\n", err)
 			}
@@ -780,14 +786,14 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 	}
 
 	// Actually apply Kubernetes manifests.
-	args := applyArgs(c.Bool("dry-run"), manifests)
+	args := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), manifests)
 	if err := runner.Run(kubectlCmd, args...); err != nil {
 		return fmt.Errorf("Error: %s\n", err)
 	}
 
 	// Apply Kubernetes secrets manifests
 	if len(manifestsSecret) > 0 {
-		argsSecret := applyArgs(c.Bool("dry-run"), manifestsSecret)
+		argsSecret := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), manifestsSecret)
 		if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
@@ -868,7 +874,7 @@ func waitForJobs(c *cli.Context, runner Runner) error {
 		log(fmt.Sprintf("Waiting until job completes for %s%s\n", job, counterProgress))
 
 		command := []string{"wait", "--for=condition=complete", job}
-		
+
 		if waitSeconds != 0 {
 			command = append(command, fmt.Sprintf("--timeout=%ds", waitSeconds))
 		}
@@ -888,13 +894,17 @@ func waitForJobs(c *cli.Context, runner Runner) error {
 }
 
 // applyArgs creates args slice for kubectl apply command
-func applyArgs(dryrun bool, file string) []string {
+func applyArgs(dryrun bool, serverSide bool, file string) []string {
 	args := []string{
 		"apply",
 	}
 
 	if dryrun {
 		args = append(args, dryRunFlag)
+	}
+
+	if serverSide {
+		args = append(args, serverSideFlag)
 	}
 
 	args = append(args, "--filename")

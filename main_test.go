@@ -632,11 +632,14 @@ func TestWaitForJobs(t *testing.T) {
 }
 
 func TestApplyArgs(t *testing.T) {
-	args := applyArgs(false, "/path/to/file/1")
+	args := applyArgs(false, false, "/path/to/file/1")
 	assert.Equal(t, []string{"apply", "--filename", "/path/to/file/1"}, args)
 
-	args = applyArgs(true, "/path/to/file/2")
+	args = applyArgs(true, false, "/path/to/file/2")
 	assert.Equal(t, []string{"apply", "--dry-run=client", "--filename", "/path/to/file/2"}, args)
+
+	args = applyArgs(false, true, "/path/to/file/3")
+	assert.Equal(t, []string{"apply", "--server-side", "--filename", "/path/to/file/3"}, args)
 }
 
 func TestPrintTrimmedError(t *testing.T) {
