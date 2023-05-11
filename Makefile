@@ -201,6 +201,7 @@ run :
 	@$(docker) run \
 		--env PLUGIN_CLUSTER \
 		--env PLUGIN_DRY_RUN \
+		--env PLUGIN_SERVER_SIDE \
 		--env PLUGIN_EXPAND_ENV_VARS \
 		--env PLUGIN_KUBECTL_VERSION \
 		--env PLUGIN_NAMESPACE \
