@@ -918,7 +918,7 @@ func TestSetDryRunFlag(t *testing.T) {
 					}
 
 					// Run
-					setDryRunFlag(testRunner, buf)
+					setDryRunFlag(testRunner, buf, ctx)
 
 					// Check
 					if dryRunFlag != test.expectedFlag {

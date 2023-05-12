@@ -256,7 +256,7 @@ func run(c *cli.Context) error {
 	// Parse and adjust the dry-run flag if needed
 	var dryRunBuffer bytes.Buffer
 	dryRunRunner := NewBasicRunner("/", []string{}, &dryRunBuffer, &dryRunBuffer)
-	if err := setDryRunFlag(dryRunRunner, &dryRunBuffer); err != nil {
+	if err := setDryRunFlag(dryRunRunner, &dryRunBuffer, c); err != nil {
 		return err
 	}
 
@@ -446,18 +446,31 @@ func parseSkips(c *cli.Context) error {
 	return nil
 }
 
-// setDryRunFlag sets the value of the dry-run flag for the version of kubectl
-// that is being used
-func setDryRunFlag(runner Runner, output io.Reader) error {
+// setDryRunFlag sets the value of the dry-run flag based on the version of kubectl being
+// used and whether the apply should be client-side or server-side
+func setDryRunFlag(runner Runner, output io.Reader, c *cli.Context) error {
 	dryRunFlag = clientSideDryRunFlagDefault
+	isServerSideApply := c.Bool("server-side")
+
 	version, err := getMinorVersion(runner, output)
 	if err != nil {
 		return fmt.Errorf("Error determining which kubectl version is running: %v", err)
 	}
 	// default is the >= 1.18 flag
 	if version < 18 {
-		dryRunFlag = clientSideDryRunFlagPre118
+		if isServerSideApply {
+			dryRunFlag = serverSideDryRunFlagPre118
+		} else {
+			dryRunFlag = clientSideDryRunFlagPre118
+		}
+
+		return nil
 	}
+
+	if isServerSideApply {
+		dryRunFlag = serverSideDryRunFlagDefault
+	}
+
 	return nil
 }
 
