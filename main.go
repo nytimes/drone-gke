@@ -456,19 +456,17 @@ func setDryRunFlag(runner Runner, output io.Reader, c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Error determining which kubectl version is running: %v", err)
 	}
-	// default is the >= 1.18 flag
-	if version < 18 {
-		if isServerSideApply {
-			dryRunFlag = serverSideDryRunFlagPre118
-		} else {
-			dryRunFlag = clientSideDryRunFlagPre118
-		}
-
-		return nil
-	}
 
 	if isServerSideApply {
-		dryRunFlag = serverSideDryRunFlagDefault
+		if version < 18 {
+			dryRunFlag = serverSideDryRunFlagPre118
+		} else {
+			dryRunFlag = serverSideDryRunFlagDefault
+		}
+	} else {
+		if version < 18 {
+			dryRunFlag = clientSideDryRunFlagPre118
+		}
 	}
 
 	return nil
