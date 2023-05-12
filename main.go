@@ -43,7 +43,7 @@ const (
 	clientSideDryRunFlagDefault = "--dry-run=client"
 	serverSideDryRunFlagPre118  = "--server-dry-run=true"
 	serverSideDryRunFlagDefault = "--dry-run=server"
-	serverSideFlag              = "--server-side"
+	serverSideApplyFlag         = "--server-side"
 )
 
 // default to kubectlCmdName, can be overriden via kubectl-version param
@@ -450,13 +450,15 @@ func parseSkips(c *cli.Context) error {
 // used and whether the apply should be client-side or server-side
 func setDryRunFlag(runner Runner, output io.Reader, c *cli.Context) error {
 	dryRunFlag = clientSideDryRunFlagDefault
-	isServerSideApply := c.Bool("server-side")
 
 	version, err := getMinorVersion(runner, output)
 	if err != nil {
 		return fmt.Errorf("Error determining which kubectl version is running: %v", err)
 	}
 
+	isServerSideApply := c.Bool("server-side")
+
+	// Default is the >= 1.18 flag for both server- and client-side dry runs
 	if isServerSideApply {
 		if version < 18 {
 			dryRunFlag = serverSideDryRunFlagPre118
@@ -917,7 +919,7 @@ func applyArgs(dryrun bool, serverSide bool, file string) []string {
 	}
 
 	if serverSide {
-		args = append(args, serverSideFlag)
+		args = append(args, serverSideApplyFlag)
 	}
 
 	args = append(args, "--filename")
