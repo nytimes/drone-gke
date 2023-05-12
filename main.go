@@ -39,9 +39,9 @@ const (
 	nsPath           = "/tmp/namespace.json"
 	templateBasePath = "/tmp"
 
-	dryRunFlagPre118  = "--dry-run=true"
-	dryRunFlagDefault = "--dry-run=client"
-	serverSideFlag    = "--server-side"
+	clientSideDryRunFlagPre118  = "--dry-run=true"
+	clientSideDryRunFlagDefault = "--dry-run=client"
+	serverSideFlag              = "--server-side"
 )
 
 // default to kubectlCmdName, can be overriden via kubectl-version param
@@ -55,7 +55,7 @@ metadata:
   name: %s
 `
 var invalidNameRegex = regexp.MustCompile(`[^a-z0-9\.\-]+`)
-var dryRunFlag = dryRunFlagDefault
+var dryRunFlag = clientSideDryRunFlagDefault
 
 func main() {
 	err := wrapMain()
@@ -447,14 +447,14 @@ func parseSkips(c *cli.Context) error {
 // setDryRunFlag sets the value of the dry-run flag for the version of kubectl
 // that is being used
 func setDryRunFlag(runner Runner, output io.Reader) error {
-	dryRunFlag = dryRunFlagDefault
+	dryRunFlag = clientSideDryRunFlagDefault
 	version, err := getMinorVersion(runner, output)
 	if err != nil {
 		return fmt.Errorf("Error determining which kubectl version is running: %v", err)
 	}
 	// default is the >= 1.18 flag
 	if version < 18 {
-		dryRunFlag = dryRunFlagPre118
+		dryRunFlag = clientSideDryRunFlagPre118
 	}
 	return nil
 }

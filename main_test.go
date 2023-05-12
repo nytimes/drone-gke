@@ -758,7 +758,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.15",
@@ -776,7 +776,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.15",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.16",
@@ -794,7 +794,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.16",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.17",
@@ -812,7 +812,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.17",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.18",
@@ -830,7 +830,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.18",
-			expectedFlag:    dryRunFlagDefault,
+			expectedFlag:    clientSideDryRunFlagDefault,
 		},
 		{
 			name: "kubectl-1.19",
@@ -848,7 +848,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.19",
-			expectedFlag:    dryRunFlagDefault,
+			expectedFlag:    clientSideDryRunFlagDefault,
 		},
 	}
 	for _, test := range tests {
