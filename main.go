@@ -41,6 +41,8 @@ const (
 
 	clientSideDryRunFlagPre118  = "--dry-run=true"
 	clientSideDryRunFlagDefault = "--dry-run=client"
+	serverSideDryRunFlagPre118  = "--server-dry-run=true"
+	serverSideDryRunFlagDefault = "--dry-run=server"
 	serverSideFlag              = "--server-side"
 )
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -739,6 +740,7 @@ func TestSetDryRunFlag(t *testing.T) {
 		name                 string
 		versionCommandOutput string
 		explicitVersion      string
+		isServerSide         bool
 
 		expectedFlag string
 	}{
@@ -815,6 +817,25 @@ func TestSetDryRunFlag(t *testing.T) {
 			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
+			name: "kubectl-1.17",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "17",
+					"gitVersion": "v1.17.17",
+					"gitCommit": "f3abc15296f3a3f54e4ee42e830c61047b13895f",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-13T13:21:12Z",
+					"goVersion": "go1.13.15",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.17",
+			isServerSide:    true,
+			expectedFlag:    serverSideDryRunFlagPre118,
+		},
+		{
 			name: "kubectl-1.18",
 			versionCommandOutput: `{
 				"clientVersion": {
@@ -831,6 +852,25 @@ func TestSetDryRunFlag(t *testing.T) {
 			}`,
 			explicitVersion: "1.18",
 			expectedFlag:    clientSideDryRunFlagDefault,
+		},
+		{
+			name: "kubectl-1.18",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "18",
+					"gitVersion": "v1.18.15",
+					"gitCommit": "73dd5c840662bb066a146d0871216333181f4b64",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-13T13:22:41Z",
+					"goVersion": "go1.13.15",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.18",
+			isServerSide:    true,
+			expectedFlag:    serverSideDryRunFlagDefault,
 		},
 		{
 			name: "kubectl-1.19",
@@ -856,6 +896,7 @@ func TestSetDryRunFlag(t *testing.T) {
 			os.Clearenv()
 
 			os.Setenv("PLUGIN_KUBECTL_VERSION", test.explicitVersion)
+			os.Setenv("PLUGIN_SERVER_SIDE", strconv.FormatBool(test.isServerSide))
 
 			err := (&cli.App{
 				Flags: getAppFlags(),
