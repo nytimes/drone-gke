@@ -565,6 +565,29 @@ steps:
       # ...
 ```
 
+### `server_side`
+
+_**type**_ `bool`
+
+_**default**_ `false`
+
+_**description**_ Perform a Kubernetes [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/)
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      server_side: true
+      # ...
+```
+
 ### `verbose`
 
 _**type**_ `bool`

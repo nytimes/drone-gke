@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -632,11 +633,14 @@ func TestWaitForJobs(t *testing.T) {
 }
 
 func TestApplyArgs(t *testing.T) {
-	args := applyArgs(false, "/path/to/file/1")
+	args := applyArgs(false, false, "/path/to/file/1")
 	assert.Equal(t, []string{"apply", "--filename", "/path/to/file/1"}, args)
 
-	args = applyArgs(true, "/path/to/file/2")
+	args = applyArgs(true, false, "/path/to/file/2")
 	assert.Equal(t, []string{"apply", "--dry-run=client", "--filename", "/path/to/file/2"}, args)
+
+	args = applyArgs(false, true, "/path/to/file/3")
+	assert.Equal(t, []string{"apply", "--server-side", "--filename", "/path/to/file/3"}, args)
 }
 
 func TestPrintTrimmedError(t *testing.T) {
@@ -736,6 +740,7 @@ func TestSetDryRunFlag(t *testing.T) {
 		name                 string
 		versionCommandOutput string
 		explicitVersion      string
+		isServerSide         bool
 
 		expectedFlag string
 	}{
@@ -755,7 +760,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.15",
@@ -773,7 +778,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.15",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.16",
@@ -791,7 +796,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.16",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.17",
@@ -809,7 +814,26 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.17",
-			expectedFlag:    dryRunFlagPre118,
+			expectedFlag:    clientSideDryRunFlagPre118,
+		},
+		{
+			name: "kubectl-1.17",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "17",
+					"gitVersion": "v1.17.17",
+					"gitCommit": "f3abc15296f3a3f54e4ee42e830c61047b13895f",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-13T13:21:12Z",
+					"goVersion": "go1.13.15",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.17",
+			isServerSide:    true,
+			expectedFlag:    serverSideDryRunFlagPre118,
 		},
 		{
 			name: "kubectl-1.18",
@@ -827,7 +851,26 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.18",
-			expectedFlag:    dryRunFlagDefault,
+			expectedFlag:    clientSideDryRunFlagDefault,
+		},
+		{
+			name: "kubectl-1.18",
+			versionCommandOutput: `{
+				"clientVersion": {
+					"major": "1",
+					"minor": "18",
+					"gitVersion": "v1.18.15",
+					"gitCommit": "73dd5c840662bb066a146d0871216333181f4b64",
+					"gitTreeState": "clean",
+					"buildDate": "2021-01-13T13:22:41Z",
+					"goVersion": "go1.13.15",
+					"compiler": "gc",
+					"platform": "linux/amd64"
+				}
+			}`,
+			explicitVersion: "1.18",
+			isServerSide:    true,
+			expectedFlag:    serverSideDryRunFlagDefault,
 		},
 		{
 			name: "kubectl-1.19",
@@ -845,7 +888,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				}
 			}`,
 			explicitVersion: "1.19",
-			expectedFlag:    dryRunFlagDefault,
+			expectedFlag:    clientSideDryRunFlagDefault,
 		},
 	}
 	for _, test := range tests {
@@ -853,6 +896,7 @@ func TestSetDryRunFlag(t *testing.T) {
 			os.Clearenv()
 
 			os.Setenv("PLUGIN_KUBECTL_VERSION", test.explicitVersion)
+			os.Setenv("PLUGIN_SERVER_SIDE", strconv.FormatBool(test.isServerSide))
 
 			err := (&cli.App{
 				Flags: getAppFlags(),
@@ -874,7 +918,7 @@ func TestSetDryRunFlag(t *testing.T) {
 					}
 
 					// Run
-					setDryRunFlag(testRunner, buf)
+					setDryRunFlag(testRunner, buf, ctx)
 
 					// Check
 					if dryRunFlag != test.expectedFlag {
