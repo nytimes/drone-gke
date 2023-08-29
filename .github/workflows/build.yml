@@ -81,5 +81,5 @@ jobs:
             "text": "GitHub Actions Build Result: ${{ job.status }}\n triggered_by: ${{ github.actor }}\n job url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n commit url: ${{ github.event.head_commit.url }}"
           }
       env:
-        # webhook for #dv-cdp-alerts
+        # webhook for #dv-notifications
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
