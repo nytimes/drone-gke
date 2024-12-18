@@ -73,6 +73,17 @@ func TestCheckParams(t *testing.T) {
 	set.String("cluster", "cluster-0", "")
 	err = checkParams(c)
 	assert.NoError(t, err)
+
+	// Sanitizes namespace
+	set = flag.NewFlagSet("namespace-sanitize", 0)
+	c = cli.NewContext(nil, set, nil)
+	set.String("token", "{}", "")
+	set.String("region", "us-west1", "")
+	set.String("cluster", "cluster-0", "")
+	set.String("namespace", "feature/1892-TEST-NS", "")
+	err = checkParams(c)
+	assert.NoError(t, err)
+	assert.Equal(t, "feature-1892-test-ns", c.String("namespace"))
 }
 
 func TestValidateKubectlVersion(t *testing.T) {
@@ -482,7 +493,7 @@ func TestSetNamespace(t *testing.T) {
 	set = flag.NewFlagSet("test-set", 0)
 	set.String("zone", "us-east1-b", "")
 	set.String("cluster", "cluster-0", "")
-	set.String("namespace", "Feature/1892-TEST-NS", "")
+	set.String("namespace", "feature-1892-test-ns", "")
 	set.Bool("dry-run", true, "")
 	set.Bool("create-namespace", true, "")
 	c = cli.NewContext(nil, set, nil)
@@ -498,7 +509,7 @@ func TestSetNamespace(t *testing.T) {
 	set = flag.NewFlagSet("no-create-namespace-set", 0)
 	set.String("zone", "us-east1-b", "")
 	set.String("cluster", "cluster-0", "")
-	set.String("namespace", "Feature/1892-TEST-NS", "")
+	set.String("namespace", "feature-1892-test-ns", "")
 	set.Bool("dry-run", false, "")
 	set.Bool("create-namespace", false, "")
 	c = cli.NewContext(nil, set, nil)
@@ -985,6 +996,52 @@ func Test_decodeToken(t *testing.T) {
 			if got := decodeToken(tt.args.token); got != tt.want {
 				t.Errorf("decodeToken() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestSanitizeNamespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "already sanitized",
+			input:    "test-ns",
+			expected: "test-ns",
+		},
+		{
+			name:     "uppercase characters",
+			input:    "TEST-NS",
+			expected: "test-ns",
+		},
+		{
+			name:     "mixed case",
+			input:    "Test-Ns",
+			expected: "test-ns",
+		},
+		{
+			name:     "special-chars",
+			input:    "feature/1892_test_ns",
+			expected: "feature-1892-test-ns",
+		},
+		{
+			name:     "uppercase and special chars",
+			input:    "feature/1892-TEST-NS",
+			expected: "feature-1892-test-ns",
+		},
+		{
+			name:     "empty",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := sanitizeNamespace(tt.input)
+			assert.Equal(t, tt.expected, output)
 		})
 	}
 }
