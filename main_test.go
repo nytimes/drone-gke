@@ -494,6 +494,9 @@ func TestSetNamespace(t *testing.T) {
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
 
+	// Namespace flag is normalized
+	assert.Equal(t, c.String("namespace"), "feature-1892-test-ns")
+
 	// Opt-out of auto namespace creation
 	set = flag.NewFlagSet("no-create-namespace-set", 0)
 	set.String("zone", "us-east1-b", "")
@@ -508,6 +511,9 @@ func TestSetNamespace(t *testing.T) {
 	err = setNamespace(c, "test-project", testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
+
+	// Namespace flag is normalized
+	assert.Equal(t, c.String("namespace"), "feature-1892-test-ns")
 }
 
 func TestApplyManifests(t *testing.T) {

@@ -736,6 +736,8 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 	// Set the execution namespace.
 	log("Configuring kubectl to the %s namespace\n", namespace)
 
+	c.Set("namespace", namespace)
+
 	// set cluster location segment based on parameters provided to plugin
 	// checkParams requires at least one of zone or region to be provided and prevents use of both at the same time
 	clusterLocation := ""
