@@ -493,7 +493,7 @@ func TestSetNamespace(t *testing.T) {
 	set = flag.NewFlagSet("test-set", 0)
 	set.String("zone", "us-east1-b", "")
 	set.String("cluster", "cluster-0", "")
-	set.String("namespace", "feature-1892-test-ns", "")
+	set.String("namespace", "feature-1892-test-ns", "") // the namespace is already sanitized by this point
 	set.Bool("dry-run", true, "")
 	set.Bool("create-namespace", true, "")
 	c = cli.NewContext(nil, set, nil)
@@ -509,7 +509,7 @@ func TestSetNamespace(t *testing.T) {
 	set = flag.NewFlagSet("no-create-namespace-set", 0)
 	set.String("zone", "us-east1-b", "")
 	set.String("cluster", "cluster-0", "")
-	set.String("namespace", "feature-1892-test-ns", "")
+	set.String("namespace", "feature-1892-test-ns", "") // the namespace is already sanitized by this point
 	set.Bool("dry-run", false, "")
 	set.Bool("create-namespace", false, "")
 	c = cli.NewContext(nil, set, nil)
