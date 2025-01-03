@@ -381,11 +381,20 @@ func checkParams(c *cli.Context) error {
 		return fmt.Errorf("Missing required param: cluster")
 	}
 
+	namespace := c.String("namespace")
+	c.Set("namespace", sanitizeNamespace(namespace))
+
 	if err := validateKubectlVersion(c, extraKubectlVersions); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func sanitizeNamespace(namespace string) string {
+	namespace = strings.ToLower(namespace)
+	namespace = invalidNameRegex.ReplaceAllString(namespace, "-")
+	return namespace
 }
 
 // validateKubectlVersion tests whether a given version is valid within the current environment
@@ -728,10 +737,6 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 	if namespace == "" {
 		return nil
 	}
-
-	//replace invalid char in namespace
-	namespace = strings.ToLower(namespace)
-	namespace = invalidNameRegex.ReplaceAllString(namespace, "-")
 
 	// Set the execution namespace.
 	log("Configuring kubectl to the %s namespace\n", namespace)
