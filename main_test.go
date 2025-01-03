@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -208,7 +207,8 @@ func TestFetchCredentials(t *testing.T) {
 	assert.NoError(t, regionalErr)
 
 	// Verify token file
-	buf, err := ioutil.ReadFile("/tmp/gcloud.json")
+	buf, err := os.ReadFile("/tmp/gcloud.json")
+	assert.NoError(t, err)
 	assert.Equal(t, "{\"key\", \"val\"}", string(buf))
 
 	// Run() error
@@ -270,13 +270,13 @@ func TestTemplateData(t *testing.T) {
 
 	// Variable overrides existing ones
 	vars = map[string]interface{}{"zone": "us-east4-b"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
+	_, _, _, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 
 	// Secret overrides variable
 	vars = map[string]interface{}{"SECRET_TEST": "val0"}
 	secrets = map[string]string{"SECRET_TEST": "test_val"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
+	_, _, _, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 }
 
@@ -335,19 +335,20 @@ func TestTemplateDataExpandingVars(t *testing.T) {
 
 	// Variable overrides existing ones
 	vars = map[string]interface{}{"zone": "us-east4-b"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
+	_, _, _, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 
 	// Secret overrides variable
 	vars = map[string]interface{}{"SECRET_TEST": "val0"}
 	secrets = map[string]string{"SECRET_TEST": "test_val"}
-	tmplData, secretsData, secretsDataRedacted, err = templateData(c, "us-east1-b", vars, secrets)
+	_, _, _, err = templateData(c, "us-east1-b", vars, secrets)
 	assert.Error(t, err)
 }
 
 func TestRenderTemplates(t *testing.T) {
 	// Mkdir for testing template files
-	os.MkdirAll("/tmp/drone-gke-tests/", os.ModePerm)
+	err := os.MkdirAll("/tmp/drone-gke-tests/", os.ModePerm)
+	assert.NoError(t, err)
 	kubeTemplatePath := "/tmp/drone-gke-tests/.kube.yml"
 	secretTemplatePath := "/tmp/drone-gke-tests/.kube.sec.yml"
 
@@ -370,16 +371,16 @@ func TestRenderTemplates(t *testing.T) {
 	// No template file, should error
 	os.Remove(kubeTemplatePath)
 	os.Remove(secretTemplatePath)
-	_, err := renderTemplates(c, tmplData, secretsData)
+	_, err = renderTemplates(c, tmplData, secretsData)
 	assert.Error(t, err)
 
 	// Normal
 	// Create test template files
 	tmplBuf := []byte("{{.COMMIT}}-{{.key0}}")
-	err = ioutil.WriteFile(kubeTemplatePath, tmplBuf, 0600)
+	err = os.WriteFile(kubeTemplatePath, tmplBuf, 0600)
 	assert.NoError(t, err)
 	tmplBuf = []byte("{{.COMMIT}}-{{.SECRET_TEST}}")
-	err = ioutil.WriteFile(secretTemplatePath, tmplBuf, 0600)
+	err = os.WriteFile(secretTemplatePath, tmplBuf, 0600)
 	assert.NoError(t, err)
 
 	// Render
@@ -387,15 +388,18 @@ func TestRenderTemplates(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify token files
-	buf, err := ioutil.ReadFile(manifestPaths[kubeTemplatePath])
+	buf, err := os.ReadFile(manifestPaths[kubeTemplatePath])
+	assert.NoError(t, err)
 	assert.Equal(t, "e0f21b90a-val0", string(buf))
 
-	buf, err = ioutil.ReadFile(manifestPaths[secretTemplatePath])
+	buf, err = os.ReadFile(manifestPaths[secretTemplatePath])
+	assert.NoError(t, err)
 	assert.Equal(t, "e0f21b90a-test_sec_val", string(buf))
 
 	// Secret variables shouldn't be available in kube template
 	tmplBuf = []byte("{{.SECRET_TEST}}")
-	err = ioutil.WriteFile(kubeTemplatePath, tmplBuf, 0600)
+	err = os.WriteFile(kubeTemplatePath, tmplBuf, 0600)
+	assert.NoError(t, err)
 	_, err = renderTemplates(c, tmplData, secretsData)
 	assert.Error(t, err)
 }
@@ -486,7 +490,8 @@ func TestSetNamespace(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify written file
-	buf, err := ioutil.ReadFile("/tmp/namespace.json")
+	buf, err := os.ReadFile("/tmp/namespace.json")
+	assert.NoError(t, err)
 	assert.Equal(t, "\n---\napiVersion: v1\nkind: Namespace\nmetadata:\n  name: test-ns\n", string(buf))
 
 	// Dry-run
@@ -902,6 +907,7 @@ func TestSetDryRunFlag(t *testing.T) {
 			expectedFlag:    clientSideDryRunFlagDefault,
 		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			os.Clearenv()
@@ -929,7 +935,8 @@ func TestSetDryRunFlag(t *testing.T) {
 					}
 
 					// Run
-					setDryRunFlag(testRunner, buf, ctx)
+					err := setDryRunFlag(testRunner, buf, ctx)
+					assert.NoError(t, err)
 
 					// Check
 					if dryRunFlag != test.expectedFlag {
@@ -938,7 +945,6 @@ func TestSetDryRunFlag(t *testing.T) {
 					return nil
 				},
 			}).Run([]string{"run"})
-
 			if err != nil {
 				t.Fatalf("unepected err: %v", err)
 			}
