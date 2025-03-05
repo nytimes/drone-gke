@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -1092,7 +1093,100 @@ func TestSetDryRunFlag(t *testing.T) {
 	}
 }
 
-func Test_decodeToken(t *testing.T) {
+func TestCustomCommands(t *testing.T) {
+	tests := map[string]struct {
+		commands         []string
+		expectedCommands []string
+		commandCount     int
+	}{
+		"no commands": {
+			commands:         []string{},
+			expectedCommands: []string{},
+			commandCount:     0,
+		},
+		"single commnand": {
+			commands: []string{
+				"echo 'hello'",
+			},
+			expectedCommands: []string{
+				"echo 'hello'",
+			},
+			commandCount: 1,
+		},
+		"multiple commands": {
+			commands: []string{
+				"echo 'hello'",
+				"echo 'how are you?'",
+				"echo 'goodbye'",
+			},
+			expectedCommands: []string{
+				"echo 'hello'",
+				"echo 'how are you?'",
+				"echo 'goodbye'",
+			},
+			commandCount: 3,
+		},
+		"multiple commands with empty command": {
+			commands: []string{
+				"echo 'hello'",
+				"",
+				"echo 'goodbye'",
+			},
+			expectedCommands: []string{
+				"echo 'hello'",
+				"echo 'goodbye'",
+			},
+			commandCount: 2,
+		},
+		"extra space": {
+			commands: []string{
+				"           echo 'hello'        ",
+			},
+			expectedCommands: []string{
+				"echo 'hello'",
+			},
+			commandCount: 1,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			os.Clearenv()
+
+			os.Setenv("PLUGIN_COMMANDS", strings.Join(tc.commands, ","))
+
+			err := (&cli.App{
+				Flags: getAppFlags(),
+				Action: func(ctx *cli.Context) error {
+					testRunner := new(MockedRunner)
+
+					for _, command := range tc.commands {
+						if strings.TrimSpace(command) == "" {
+							continue
+						}
+						testRunner.On("Run", []string{"sh", "-c", strings.TrimSpace(command)}).Return(nil)
+					}
+
+					err := runCustomCommands(ctx, testRunner)
+					require.NoError(t, err)
+
+					for _, command := range tc.expectedCommands {
+						testRunner.AssertCalled(t, "Run", []string{"sh", "-c", strings.TrimSpace(command)})
+					}
+
+					testRunner.AssertNumberOfCalls(t, "Run", tc.commandCount)
+
+					return nil
+				},
+			}).Run([]string{"run"})
+			if err != nil {
+				t.Fatalf("unepected err: %v", err)
+			}
+		})
+	}
+}
+
+func TestDecodeToken(t *testing.T) {
 	serviceAccountKey := `{
   "type": "service_account",
   "project_id": "nyt-project-dev",

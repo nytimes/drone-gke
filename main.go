@@ -198,6 +198,11 @@ func getAppFlags() []cli.Flag {
 			Usage:   "optional - version of kubectl binary to use, e.g. 1.14",
 			EnvVars: []string{"PLUGIN_KUBECTL_VERSION"},
 		},
+		&cli.StringSliceFlag{
+			Name:    "commands",
+			Usage:   "list of commands to run",
+			EnvVars: []string{"PLUGIN_COMMANDS"},
+		},
 	}
 }
 
@@ -305,7 +310,7 @@ func run(c *cli.Context) error {
 	// Render manifest templates
 	manifestPaths, err := renderTemplates(c, templateData, secretsData)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed rendering templates: %w", err)
 	}
 
 	// Print rendered file
@@ -315,12 +320,12 @@ func run(c *cli.Context) error {
 
 	// kubectl version
 	if err := printKubectlVersion(runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed printing kubectl version: %w", err)
 	}
 
 	// Set namespace and ensure it exists
 	if err := setNamespace(c, project, runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed creating namespace: %w", err)
 	}
 
 	// Apply manifests
@@ -331,21 +336,27 @@ func run(c *cli.Context) error {
 		// Print last line of error of applying secret manifest to stderr
 		// Disable it for now as it might still leak secrets
 		// printTrimmedError(&secretStderr, os.Stderr)
-		return fmt.Errorf("Error (kubectl output redacted): %s\n", err)
+		return fmt.Errorf("error applying manifests (kubectl output redacted): %w", err)
 	}
 
 	if c.Bool("dry-run") {
 		log("Not waiting for rollout, this was a dry-run\n")
 		return nil
 	}
+
+	if err := runCustomCommands(c, runner); err != nil {
+		log("Error running custom commands: %s\n", err)
+		return fmt.Errorf("failed to run custom commands: %w", err)
+	}
+
 	// Wait for rollout to finish
 	if err := waitForRollout(c, runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed while waiting for rollout: %w", err)
 	}
 
 	// Wait for jobs to finish
 	if err := waitForJobs(c, runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed while waiting for jobs to finish: %w", err)
 	}
 
 	return nil
@@ -790,8 +801,10 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 
 	if !c.Bool("dry-run") {
 		if c.Bool("skip-secret-template") {
-			log("Skipping validation of Kubernetes Secret manifests (skip_secret_template: true)\n")
-		} else if manifestsSecret != "" {
+			log("Skipping validation of Kubernetes Secret manifest (skip_secret_template: true)\n")
+		} else if manifestsSecret == "" {
+			log("Skipping validation of Kubernetes Secret manifest: template location not set\n")
+		} else {
 			args := applyArgs(true, c.Bool("server-side"), manifestsSecret)
 			if err := runnerSecret.Run(kubectlCmd, args...); err != nil {
 				return fmt.Errorf("Error: %s\n", err)
@@ -799,7 +812,9 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 		}
 
 		if c.Bool("skip-template") {
-			log("Skipping validation of Kubernetes manifests (skip_template: true)\n")
+			log("Skipping validation of Kubernetes manifest (skip_template: true)\n")
+		} else if manifests == "" {
+			log("Skipping validation of Kubernetes manifest: template location not set\n")
 		} else {
 			args := applyArgs(true, c.Bool("server-side"), manifests)
 			if err := runner.Run(kubectlCmd, args...); err != nil {
@@ -813,8 +828,10 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 	// Apply Kubernetes secrets manifests.
 	// Secrets need to be applied first, as they may be used by other resources.
 	if c.Bool("skip-secret-template") {
-		log("Skipping application of Kubernetes Secret manifests (skip_secret_template: true)\n")
-	} else if manifestsSecret != "" {
+		log("Skipping application of Kubernetes Secret manifest (skip_secret_template: true)\n")
+	} else if manifestsSecret == "" {
+		log("Skipping application of Kubernetes Secret manifest: template location not set\n")
+	} else {
 		argsSecret := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), manifestsSecret)
 		if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
@@ -823,7 +840,9 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 
 	// Actually apply Kubernetes manifests.
 	if c.Bool("skip-template") {
-		log("Skipping application of Kubernetes manifests (skip_template: true)\n")
+		log("Skipping application of Kubernetes manifest (skip_template: true)\n")
+	} else if manifests == "" {
+		log("Skipping application of Kubernetes manifest: template location not set\n")
 	} else {
 		args := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), manifests)
 		if err := runner.Run(kubectlCmd, args...); err != nil {
@@ -943,6 +962,29 @@ func applyArgs(dryrun bool, serverSide bool, file string) []string {
 	args = append(args, file)
 
 	return args
+}
+
+func runCustomCommands(c *cli.Context, runner Runner) error {
+	commands := c.StringSlice("commands")
+	if len(commands) == 0 {
+		return nil
+	}
+
+	for _, command := range commands {
+		command = strings.TrimSpace(command)
+
+		if command == "" {
+			continue
+		}
+
+		log("Running custom command: %s\n", command)
+
+		if err := runner.Run("sh", "-c", command); err != nil {
+			return fmt.Errorf("error running custom command %s: %w", command, err)
+		}
+	}
+
+	return nil
 }
 
 // printTrimmedError prints the last line of stderrbuf to dest

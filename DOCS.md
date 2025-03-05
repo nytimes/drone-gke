@@ -361,8 +361,8 @@ _**example**_
 kind: pipeline
 # ...
 steps:
-  - name: deploy-eks
-    image: nytimes/drone-eks
+  - name: deploy-gke
+    image: nytimes/drone-gke
     settings:
       wait_jobs:
       - job/migration
@@ -388,8 +388,8 @@ _**example**_
 kind: pipeline
 # ...
 steps:
-  - name: deploy-eks
-    image: nytimes/drone-eks
+  - name: deploy-gke
+    image: nytimes/drone-gke
     settings:
       wait_jobs_seconds: 180
       wait_jobs:
@@ -443,6 +443,35 @@ steps:
         app_name: echo
         app_image: gcr.io/google_containers/echoserver:1.4
         env: dev
+      # ...
+```
+
+### `commands`
+
+_**type**_ `[]string`
+
+_**default**_ `[]`
+
+_**description**_ custom commands that will run inside the cluster
+
+_**notes**_ commands run after the [`secret_template`](#secret_template) and [`template`](#template) manifests are applied and before [`wait_deployments`](#wait_deployments) and [`wait_jobs`](#wait_jobs) run.
+
+commands will not run if [`dry_run`](#dry_run) is set to `true`.
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      commands:
+      - echo 'hello'
+      - echo 'have a good day'
       # ...
 ```
 
