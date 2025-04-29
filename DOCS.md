@@ -187,7 +187,8 @@ _**default**_ `'.kube.yml'`
 _**description**_ path to Kubernetes manifest template
 
 _**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package.
-If the file does not exist, set `skip_template` to `true`.
+The `secret_template` manifest (`.kube.sec.yml`) will apply prior to the `template` manifest (`.kube.yml`), as the secrets may need to be available to the main manifest file.
+If the file does not exist or you do not want the plugin to apply the template, set `skip_template` to `true`.
 
 _**example**_
 
@@ -239,7 +240,8 @@ _**default**_ `'.kube.sec.yml'`
 _**description**_ path to Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template
 
 _**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package.
-If the file does not exist, set `skip_secret_template` to `true`.
+The `secret_template` manifest (`.kube.sec.yml`) will apply prior to the `template` manifest (`.kube.yml`), as the secrets may need to be available to the main manifest file.
+If the file does not exist or you do not want the plugin to apply the template, set `skip_secret_template` to `true`.
 
 _**example**_
 
@@ -359,8 +361,8 @@ _**example**_
 kind: pipeline
 # ...
 steps:
-  - name: deploy-eks
-    image: nytimes/drone-eks
+  - name: deploy-gke
+    image: nytimes/drone-gke
     settings:
       wait_jobs:
       - job/migration
@@ -386,8 +388,8 @@ _**example**_
 kind: pipeline
 # ...
 steps:
-  - name: deploy-eks
-    image: nytimes/drone-eks
+  - name: deploy-gke
+    image: nytimes/drone-gke
     settings:
       wait_jobs_seconds: 180
       wait_jobs:
@@ -441,6 +443,35 @@ steps:
         app_name: echo
         app_image: gcr.io/google_containers/echoserver:1.4
         env: dev
+      # ...
+```
+
+### `commands`
+
+_**type**_ `[]string`
+
+_**default**_ `[]`
+
+_**description**_ custom commands that will run inside the cluster
+
+_**notes**_ commands run after the [`secret_template`](#secret_template) and [`template`](#template) manifests are applied and before [`wait_deployments`](#wait_deployments) and [`wait_jobs`](#wait_jobs) run.
+
+commands will not run if [`dry_run`](#dry_run) is set to `true`.
+
+_**example**_
+
+```yaml
+# .drone.yml
+---
+kind: pipeline
+# ...
+steps:
+  - name: deploy-gke
+    image: nytimes/drone-gke
+    settings:
+      commands:
+      - echo 'hello'
+      - echo 'have a good day'
       # ...
 ```
 
