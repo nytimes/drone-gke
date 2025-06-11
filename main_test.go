@@ -535,27 +535,27 @@ func TestApplyManifests(t *testing.T) {
 	c := cli.NewContext(nil, set, nil)
 
 	manifestPaths := map[string]string{
-		".kube.yml":     "/path/to/kube-tamplate",
-		".kube.sec.yml": "/path/to/secret-tamplate",
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
 	}
 
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"}).Return(nil)
 	err := applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
 
 	// No secrets manifest
 	manifestPaths = map[string]string{
-		".kube.yml": "/path/to/kube-tamplate",
+		".kube.yml": "/path/to/kube-template",
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -568,16 +568,156 @@ func TestApplyManifests(t *testing.T) {
 	c = cli.NewContext(nil, set, nil)
 
 	manifestPaths = map[string]string{
-		".kube.yml":     "/path/to/kube-tamplate",
-		".kube.sec.yml": "/path/to/secret-tamplate",
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
+
+	// skip_secret_template: true
+	set = flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", ".kube.yml", "")
+	set.String("secret-template", ".kube.sec.yml", "")
+	set.Bool("skip-secret-template", true, "")
+	set.Bool("dry-run", false, "")
+	c = cli.NewContext(nil, set, nil)
+
+	manifestPaths = map[string]string{
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
+	}
+
+	testRunner = new(MockedRunner)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"}).Return(nil)
+	err = applyManifests(c, manifestPaths, testRunner, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+	testRunner.AssertCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"})
+	testRunner.AssertCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"})
+
+	// skip_template: true
+	set = flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", ".kube.yml", "")
+	set.String("secret-template", ".kube.sec.yml", "")
+	set.Bool("skip-template", true, "")
+	set.Bool("dry-run", false, "")
+	c = cli.NewContext(nil, set, nil)
+
+	manifestPaths = map[string]string{
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
+	}
+
+	testRunner = new(MockedRunner)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"}).Return(nil)
+	err = applyManifests(c, manifestPaths, testRunner, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+	testRunner.AssertCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"})
+	testRunner.AssertCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"})
+
+	// skip_template: true, skip_secret_template: true
+	set = flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", ".kube.yml", "")
+	set.String("secret-template", ".kube.sec.yml", "")
+	set.Bool("skip-template", true, "")
+	set.Bool("skip-secret-template", true, "")
+	set.Bool("dry-run", false, "")
+	c = cli.NewContext(nil, set, nil)
+
+	manifestPaths = map[string]string{
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
+	}
+
+	testRunner = new(MockedRunner)
+	err = applyManifests(c, manifestPaths, testRunner, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"})
+
+	// skip_secret_template: true, dry-run: true
+	set = flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", ".kube.yml", "")
+	set.String("secret-template", ".kube.sec.yml", "")
+	set.Bool("skip-secret-template", true, "")
+	set.Bool("dry-run", true, "")
+	c = cli.NewContext(nil, set, nil)
+
+	manifestPaths = map[string]string{
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
+	}
+
+	testRunner = new(MockedRunner)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	err = applyManifests(c, manifestPaths, testRunner, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"})
+	testRunner.AssertCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"})
+
+	// skip_template: true, dry-run: true
+	set = flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", ".kube.yml", "")
+	set.String("secret-template", ".kube.sec.yml", "")
+	set.Bool("skip-template", true, "")
+	set.Bool("dry-run", true, "")
+	c = cli.NewContext(nil, set, nil)
+
+	manifestPaths = map[string]string{
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
+	}
+
+	testRunner = new(MockedRunner)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"}).Return(nil)
+	err = applyManifests(c, manifestPaths, testRunner, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+	testRunner.AssertCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"})
+
+	// skip_template: true, skip_secret_template: true, dry-run: true
+	set = flag.NewFlagSet("test-set", 0)
+	set.String("kube-template", ".kube.yml", "")
+	set.String("secret-template", ".kube.sec.yml", "")
+	set.Bool("skip-template", true, "")
+	set.Bool("skip-secret-template", true, "")
+	set.Bool("dry-run", true, "")
+	c = cli.NewContext(nil, set, nil)
+
+	manifestPaths = map[string]string{
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
+	}
+
+	testRunner = new(MockedRunner)
+	err = applyManifests(c, manifestPaths, testRunner, testRunner)
+	testRunner.AssertExpectations(t)
+	assert.NoError(t, err)
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"})
+	testRunner.AssertNotCalled(t, "Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"})
 }
 
 // RunWaitForRollout is a helper function for testing WaitForRollout.  For each flag-value
