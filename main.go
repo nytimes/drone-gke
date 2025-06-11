@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -199,6 +198,11 @@ func getAppFlags() []cli.Flag {
 			Usage:   "optional - version of kubectl binary to use, e.g. 1.14",
 			EnvVars: []string{"PLUGIN_KUBECTL_VERSION"},
 		},
+		&cli.StringSliceFlag{
+			Name:    "commands",
+			Usage:   "list of commands to run",
+			EnvVars: []string{"PLUGIN_COMMANDS"},
+		},
 	}
 }
 
@@ -306,7 +310,7 @@ func run(c *cli.Context) error {
 	// Render manifest templates
 	manifestPaths, err := renderTemplates(c, templateData, secretsData)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed rendering templates: %w", err)
 	}
 
 	// Print rendered file
@@ -316,12 +320,12 @@ func run(c *cli.Context) error {
 
 	// kubectl version
 	if err := printKubectlVersion(runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed printing kubectl version: %w", err)
 	}
 
 	// Set namespace and ensure it exists
 	if err := setNamespace(c, project, runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed creating namespace: %w", err)
 	}
 
 	// Apply manifests
@@ -332,21 +336,27 @@ func run(c *cli.Context) error {
 		// Print last line of error of applying secret manifest to stderr
 		// Disable it for now as it might still leak secrets
 		// printTrimmedError(&secretStderr, os.Stderr)
-		return fmt.Errorf("Error (kubectl output redacted): %s\n", err)
+		return fmt.Errorf("error applying manifests (kubectl output redacted): %w", err)
 	}
 
 	if c.Bool("dry-run") {
 		log("Not waiting for rollout, this was a dry-run\n")
 		return nil
 	}
+
+	if err := runCustomCommands(c, runner); err != nil {
+		log("Error running custom commands: %s\n", err)
+		return fmt.Errorf("failed to run custom commands: %w", err)
+	}
+
 	// Wait for rollout to finish
 	if err := waitForRollout(c, runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed while waiting for rollout: %w", err)
 	}
 
 	// Wait for jobs to finish
 	if err := waitForJobs(c, runner); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("failed while waiting for jobs to finish: %w", err)
 	}
 
 	return nil
@@ -435,15 +445,16 @@ func getProjectFromToken(j string) string {
 // As of Drone 1.7, env vars that have an empty string as the value are dropped.
 // So we need to use and check the new set of flags to determine if the user wants to skip processing a template file.
 func parseSkips(c *cli.Context) error {
-	if c.Bool("skip-template") {
-		log("Warning: skipping kube-template because it was set to be ignored\n")
-		if err := c.Set("kube-template", ""); err != nil {
-			return err
-		}
-	}
 	if c.Bool("skip-secret-template") {
 		log("Warning: skipping secret-template because it was set to be ignored\n")
 		if err := c.Set("secret-template", ""); err != nil {
+			return err
+		}
+	}
+
+	if c.Bool("skip-template") {
+		log("Warning: skipping kube-template because it was set to be ignored\n")
+		if err := c.Set("kube-template", ""); err != nil {
 			return err
 		}
 	}
@@ -486,7 +497,7 @@ func setDryRunFlag(runner Runner, output io.Reader, c *cli.Context) error {
 // getMinorVersion fetches and parses the version from kubectl
 func getMinorVersion(runner Runner, output io.Reader) (int64, error) {
 	runner.Run(kubectlCmd, "version", "--client", "-o=json")
-	data, err := ioutil.ReadAll(output)
+	data, err := io.ReadAll(output)
 	if err != nil {
 		return 0, fmt.Errorf("Error reading kubectl version: %v", err)
 	}
@@ -574,7 +585,7 @@ func parseSecrets() (map[string]string, error) {
 func fetchCredentials(c *cli.Context, token, project string, runner Runner) error {
 	// Write credentials to tmp file to be picked up by the 'gcloud' command.
 	// This is inside the ephemeral plugin container, not on the host.
-	err := ioutil.WriteFile(keyPath, []byte(token), 0600)
+	err := os.WriteFile(keyPath, []byte(token), 0600)
 	if err != nil {
 		return fmt.Errorf("Error writing token file: %s\n", err)
 	}
@@ -703,7 +714,7 @@ func renderTemplates(c *cli.Context, templateData map[string]interface{}, secret
 		}
 
 		// Read the template.
-		blob, err := ioutil.ReadFile(t)
+		blob, err := os.ReadFile(t)
 		if err != nil {
 			return nil, fmt.Errorf("Error reading template: %s\n", err)
 		}
@@ -765,7 +776,7 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 	// Write the namespace manifest to a tmp file for application.
 	resource := fmt.Sprintf(nsTemplate, namespace)
 
-	if err := ioutil.WriteFile(nsPath, []byte(resource), 0600); err != nil {
+	if err := os.WriteFile(nsPath, []byte(resource), 0600); err != nil {
 		return fmt.Errorf("Error writing namespace resource file: %s\n", err)
 	}
 
@@ -782,7 +793,6 @@ func setNamespace(c *cli.Context, project string, runner Runner) error {
 
 // applyManifests applies manifests using kubectl apply
 func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runner, runnerSecret Runner) error {
-
 	manifests := manifestPaths[c.String("kube-template")]
 	manifestsSecret := manifestPaths[c.String("secret-template")]
 
@@ -790,14 +800,24 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 	log("Validating Kubernetes manifests with a dry-run\n")
 
 	if !c.Bool("dry-run") {
-		args := applyArgs(true, c.Bool("server-side"), manifests)
-		if err := runner.Run(kubectlCmd, args...); err != nil {
-			return fmt.Errorf("Error: %s\n", err)
+		if c.Bool("skip-secret-template") {
+			log("Skipping validation of Kubernetes Secret manifest (skip_secret_template: true)\n")
+		} else if manifestsSecret == "" {
+			log("Skipping validation of Kubernetes Secret manifest: template location not set\n")
+		} else {
+			args := applyArgs(true, c.Bool("server-side"), manifestsSecret)
+			if err := runnerSecret.Run(kubectlCmd, args...); err != nil {
+				return fmt.Errorf("Error: %s\n", err)
+			}
 		}
 
-		if len(manifestsSecret) > 0 {
-			argsSecret := applyArgs(true, c.Bool("server-side"), manifestsSecret)
-			if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
+		if c.Bool("skip-template") {
+			log("Skipping validation of Kubernetes manifest (skip_template: true)\n")
+		} else if manifests == "" {
+			log("Skipping validation of Kubernetes manifest: template location not set\n")
+		} else {
+			args := applyArgs(true, c.Bool("server-side"), manifests)
+			if err := runner.Run(kubectlCmd, args...); err != nil {
 				return fmt.Errorf("Error: %s\n", err)
 			}
 		}
@@ -805,16 +825,27 @@ func applyManifests(c *cli.Context, manifestPaths map[string]string, runner Runn
 		log("Applying Kubernetes manifests to the cluster\n")
 	}
 
-	// Actually apply Kubernetes manifests.
-	args := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), manifests)
-	if err := runner.Run(kubectlCmd, args...); err != nil {
-		return fmt.Errorf("Error: %s\n", err)
-	}
-
-	// Apply Kubernetes secrets manifests
-	if len(manifestsSecret) > 0 {
+	// Apply Kubernetes secrets manifests.
+	// Secrets need to be applied first, as they may be used by other resources.
+	if c.Bool("skip-secret-template") {
+		log("Skipping application of Kubernetes Secret manifest (skip_secret_template: true)\n")
+	} else if manifestsSecret == "" {
+		log("Skipping application of Kubernetes Secret manifest: template location not set\n")
+	} else {
 		argsSecret := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), manifestsSecret)
 		if err := runnerSecret.Run(kubectlCmd, argsSecret...); err != nil {
+			return fmt.Errorf("Error: %s\n", err)
+		}
+	}
+
+	// Actually apply Kubernetes manifests.
+	if c.Bool("skip-template") {
+		log("Skipping application of Kubernetes manifest (skip_template: true)\n")
+	} else if manifests == "" {
+		log("Skipping application of Kubernetes manifest: template location not set\n")
+	} else {
+		args := applyArgs(c.Bool("dry-run"), c.Bool("server-side"), manifests)
+		if err := runner.Run(kubectlCmd, args...); err != nil {
 			return fmt.Errorf("Error: %s\n", err)
 		}
 	}
@@ -931,6 +962,29 @@ func applyArgs(dryrun bool, serverSide bool, file string) []string {
 	args = append(args, file)
 
 	return args
+}
+
+func runCustomCommands(c *cli.Context, runner Runner) error {
+	commands := c.StringSlice("commands")
+	if len(commands) == 0 {
+		return nil
+	}
+
+	for _, command := range commands {
+		command = strings.TrimSpace(command)
+
+		if command == "" {
+			continue
+		}
+
+		log("Running custom command: %s\n", command)
+
+		if err := runner.Run("sh", "-c", command); err != nil {
+			return fmt.Errorf("error running custom command %s: %w", command, err)
+		}
+	}
+
+	return nil
 }
 
 // printTrimmedError prints the last line of stderrbuf to dest
