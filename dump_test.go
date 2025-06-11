@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -25,7 +24,7 @@ func TestDumpFile(t *testing.T) {
 	// Write to a new file
 	const path = "/tmp/drone-gke-test-dump"
 	data := []byte("hello, gke")
-	err := ioutil.WriteFile(path, data, 0644)
+	err := os.WriteFile(path, data, 0644)
 
 	if assert.NoError(t, err) {
 		output := &bytes.Buffer{}

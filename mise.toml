@@ -1,0 +1,2 @@
+[tools]
+go = 'prefix:1.24'

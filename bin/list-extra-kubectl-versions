@@ -9,6 +9,6 @@ gcloud_sdk_bin_dir=${1:-'/google-cloud-sdk/bin'}
 # defaults to default used by `gcloud components install kubectl`
 extra_kubectl_glob=${2:-'kubectl.*'}
 
-find ${gcloud_sdk_bin_dir} -type f -name ${extra_kubectl_glob} -exec basename {} \; \
-  | cut -d '.' -f 2,3 \
-  | sort -g
+find ${gcloud_sdk_bin_dir} -type f -name ${extra_kubectl_glob} -exec basename {} \; |
+  cut -d '.' -f 2,3 |
+  sort -g
