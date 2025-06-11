@@ -13,9 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on:
-      group: nyt-runners
-      labels: nyt-2-core
+    runs-on: ubuntu-latest
 
     permissions:
       actions: write
