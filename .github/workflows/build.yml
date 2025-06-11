@@ -78,10 +78,9 @@ jobs:
         uses: slackapi/slack-github-action@v2.1.0
         if: ${{ github.event_name != 'pull_request' }}
         with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
           payload: |
             {
               "text": "GitHub Actions Build Result: ${{ job.status }}\n triggered_by: ${{ github.actor }}\n job url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n commit url: ${{ github.event.head_commit.url }}"
             }
-        env:
-          # webhook for #devp-notifications
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
