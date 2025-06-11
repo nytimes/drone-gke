@@ -671,7 +671,7 @@ func TestPrintTrimmedError(t *testing.T) {
 	printTrimmedError(strings.NewReader("one line"), output)
 	assert.Equal(t, "one line\n", output.String())
 
-	// Mutiple lines
+	// Multiple lines
 	output.Reset()
 	printTrimmedError(strings.NewReader("line 1\nline 2\nline 3"), output)
 	assert.Equal(t, "line 3\n", output.String())

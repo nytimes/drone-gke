@@ -936,7 +936,7 @@ func printTrimmedError(stderrbuf io.Reader, dest io.Writer) {
 	for scanner.Scan() {
 		lastLine = scanner.Text()
 	}
-	fmt.Fprintf(dest, "%s", lastLine)
+	fmt.Fprintf(dest, "%s\n", lastLine)
 }
 
 func log(format string, a ...interface{}) {
