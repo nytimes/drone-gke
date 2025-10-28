@@ -359,8 +359,8 @@ _**example**_
 kind: pipeline
 # ...
 steps:
-  - name: deploy-eks
-    image: nytimes/drone-eks
+  - name: deploy-gke
+    image: nytimes/drone-gke
     settings:
       wait_jobs:
       - job/migration
@@ -386,8 +386,8 @@ _**example**_
 kind: pipeline
 # ...
 steps:
-  - name: deploy-eks
-    image: nytimes/drone-eks
+  - name: deploy-gke
+    image: nytimes/drone-gke
     settings:
       wait_jobs_seconds: 180
       wait_jobs:
