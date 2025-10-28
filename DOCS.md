@@ -187,7 +187,8 @@ _**default**_ `'.kube.yml'`
 _**description**_ path to Kubernetes manifest template
 
 _**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package.
-If the file does not exist, set `skip_template` to `true`.
+The `secret_template` manifest (`.kube.sec.yml`) will apply prior to the `template` manifest (`.kube.yml`), as the secrets may need to be available to the main manifest file.
+If the file does not exist or you do not want the plugin to apply the template, set `skip_template` to `true`.
 
 _**example**_
 
@@ -239,7 +240,8 @@ _**default**_ `'.kube.sec.yml'`
 _**description**_ path to Kubernetes [_Secret_ resource](http://kubernetes.io/docs/user-guide/secrets/) manifest template
 
 _**notes**_ rendered using the Go [`text/template`](https://golang.org/pkg/text/template/) package.
-If the file does not exist, set `skip_secret_template` to `true`.
+The `secret_template` manifest (`.kube.sec.yml`) will apply prior to the `template` manifest (`.kube.yml`), as the secrets may need to be available to the main manifest file.
+If the file does not exist or you do not want the plugin to apply the template, set `skip_secret_template` to `true`.
 
 _**example**_
 
