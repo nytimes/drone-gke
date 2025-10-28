@@ -2,11 +2,11 @@ name: Go
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     tags:
-      - '*'
+      - "*"
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CGO_ENABLED: 0
@@ -25,61 +25,60 @@ jobs:
       pull-requests: write
       security-events: write
       statuses: write
-      
+
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.19
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24
 
-    - name: Test
-      run: |
-        go mod download
-        go test -cover -vet all
-        
-    - name: Build
-      run: |
-        go build -a -ldflags "-X main.version=${GITHUB_REF_NAME} -X main.rev=${GITHUB_SHA}"
+      - name: Test
+        run: |
+          go mod download
+          go test -cover -vet all
 
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: nytimes/drone-gke
-        tags: |
-          type=raw,value=latest,enable={{is_default_branch}}
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=semver,pattern={{major}}
+      - name: Build
+        run: |
+          go build -a -ldflags "-X main.version=${GITHUB_REF_NAME} -X main.rev=${GITHUB_SHA}"
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      if: ${{ github.event_name != 'pull_request' }}
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: nytimes/drone-gke
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
-    # dry run, don't push image for pull_request event.
-    - name: Build and push
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        platforms: linux/amd64
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        
-    - name: Slack notification
-      id: slack
-      uses: slackapi/slack-github-action@v2.1.0
-      if: ${{ github.event_name != 'pull_request' }}
-      with:
-        payload: |
-          {
-            "text": "GitHub Actions Build Result: ${{ job.status }}\n triggered_by: ${{ github.actor }}\n job url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n commit url: ${{ github.event.head_commit.url }}"
-          }
-      env:
-        # webhook for #devp-notifications
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # dry run, don't push image for pull_request event.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Slack notification
+        id: slack
+        uses: slackapi/slack-github-action@v2.1.0
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "GitHub Actions Build Result: ${{ job.status }}\n triggered_by: ${{ github.actor }}\n job url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n commit url: ${{ github.event.head_commit.url }}"
+            }

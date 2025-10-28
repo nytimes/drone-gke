@@ -1,4 +1,4 @@
-module github.com/NYTimes/drone-gke
+module github.com/nytimes/drone-gke
 
 go 1.19
 

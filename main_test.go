@@ -535,27 +535,27 @@ func TestApplyManifests(t *testing.T) {
 	c := cli.NewContext(nil, set, nil)
 
 	manifestPaths := map[string]string{
-		".kube.yml":     "/path/to/kube-tamplate",
-		".kube.sec.yml": "/path/to/secret-tamplate",
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
 	}
 
 	testRunner := new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/secret-template"}).Return(nil)
 	err := applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
 
 	// No secrets manifest
 	manifestPaths = map[string]string{
-		".kube.yml": "/path/to/kube-tamplate",
+		".kube.yml": "/path/to/kube-template",
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--filename", "/path/to/kube-template"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -568,13 +568,13 @@ func TestApplyManifests(t *testing.T) {
 	c = cli.NewContext(nil, set, nil)
 
 	manifestPaths = map[string]string{
-		".kube.yml":     "/path/to/kube-tamplate",
-		".kube.sec.yml": "/path/to/secret-tamplate",
+		".kube.yml":     "/path/to/kube-template",
+		".kube.sec.yml": "/path/to/secret-template",
 	}
 
 	testRunner = new(MockedRunner)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-tamplate"}).Return(nil)
-	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-tamplate"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/kube-template"}).Return(nil)
+	testRunner.On("Run", []string{"kubectl", "apply", "--dry-run=client", "--filename", "/path/to/secret-template"}).Return(nil)
 	err = applyManifests(c, manifestPaths, testRunner, testRunner)
 	testRunner.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -671,7 +671,7 @@ func TestPrintTrimmedError(t *testing.T) {
 	printTrimmedError(strings.NewReader("one line"), output)
 	assert.Equal(t, "one line\n", output.String())
 
-	// Mutiple lines
+	// Multiple lines
 	output.Reset()
 	printTrimmedError(strings.NewReader("line 1\nline 2\nline 3"), output)
 	assert.Equal(t, "line 3\n", output.String())
@@ -946,7 +946,7 @@ func TestSetDryRunFlag(t *testing.T) {
 				},
 			}).Run([]string{"run"})
 			if err != nil {
-				t.Fatalf("unepected err: %v", err)
+				t.Fatalf("unexpected err: %v", err)
 			}
 		})
 	}
@@ -957,7 +957,7 @@ func Test_decodeToken(t *testing.T) {
   "type": "service_account",
   "project_id": "nyt-project-dev",
   "private_key_id": "key-id",
-  "private_key": "shhh",
+  "private_key": "secret",
   "client_email": "gke-sa@nyt-project-dev.iam.gserviceaccount.com",
   "client_id": "client-id",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -967,12 +967,12 @@ func Test_decodeToken(t *testing.T) {
 }`
 
 	encodedServiceAccountKey := "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAibnl0LXByb2plY3QtZGV2IiwK" +
-		"ICAicHJpdmF0ZV9rZXlfaWQiOiAia2V5LWlkIiwKICAicHJpdmF0ZV9rZXkiOiAic2hoaCIsCiAgImNsaWVudF9lbWFpbCI6ICJna2Utc2FAbnl0LX" +
-		"Byb2plY3QtZGV2LmlhbS5nc2VydmljZWFjY291bnQuY29tIiwKICAiY2xpZW50X2lkIjogImNsaWVudC1pZCIsCiAgImF1dGhfdXJpIjogImh0dHBz" +
-		"Oi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL29hdXRoMi9hdXRoIiwKICAidG9rZW5fdXJpIjogImh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL2" +
-		"9hdXRoMi90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEv" +
-		"Y2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2" +
-		"drZS1zYSU0MG55dC1wcm9qZWN0LWRldi5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIKfQ=="
+		"ICAicHJpdmF0ZV9rZXlfaWQiOiAia2V5LWlkIiwKICAicHJpdmF0ZV9rZXkiOiAic2VjcmV0IiwKICAiY2xpZW50X2VtYWlsIjogImdrZS1zYUBueX" +
+		"QtcHJvamVjdC1kZXYuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLAogICJjbGllbnRfaWQiOiAiY2xpZW50LWlkIiwKICAiYXV0aF91cmkiOiAiaHR0" +
+		"cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL28vb2F1dGgyL2F1dGgiLAogICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL2" +
+		"8vb2F1dGgyL3Rva2VuIiwKICAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92" +
+		"MS9jZXJ0cyIsCiAgImNsaWVudF94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL3JvYm90L3YxL21ldGFkYXRhL3g1MD" +
+		"kvZ2tlLXNhJTQwbnl0LXByb2plY3QtZGV2LmlhbS5nc2VydmljZWFjY291bnQuY29tIgp9"
 
 	type args struct {
 		token string
